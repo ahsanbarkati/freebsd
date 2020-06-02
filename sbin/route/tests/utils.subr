@@ -30,13 +30,13 @@
 . $(atf_get_srcdir)/../../sys/common/vnet.subr
 
 check_route(){
-    jname=$1
+	jname=$1
 	dest=$2
-    result=$(jexec $jname netstat -r --libxo json)
-    
-    query=".statistics.\"route-information\".\"route-table\".\"rt-family\"[0].\"rt-entry\"[]|select(.destination==\"${dest}\")"
-    
-    gateway=$(echo $result | jq ${query}.gateway)
-    echo ${gateway}
+	result=$(jexec $jname netstat -r --libxo json)
+
+	query=".statistics.\"route-information\".\"route-table\".\"rt-family\"[0].\"rt-entry\"[]|select(.destination==\"${dest}\")"
+
+	gateway=$(echo $result | jq ${query}.gateway)
+	echo ${gateway}
 }
 
