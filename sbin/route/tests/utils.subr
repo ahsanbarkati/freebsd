@@ -29,7 +29,8 @@
 
 . $(atf_get_srcdir)/../../sys/common/vnet.subr
 
-check_route(){
+check_route()
+{
 	jname=$1
 	dest=$2
 	result=$(jexec $jname netstat -r --libxo json)
