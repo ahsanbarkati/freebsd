@@ -44,11 +44,11 @@ v4_body()
 	vnet_mkjail alcatraz ${epair}a
 	jexec alcatraz ifconfig ${epair}a 192.0.2.1/24 up
 
-	# add a  new route in the jail
+	# add a new route in the jail
 	jexec alcatraz route add 192.0.2.3 192.0.2.2
 	gateway=$(check_route "alcatraz" "192.0.2.3")
 
-	if [ "${gateway}" != "\"192.0.2.2\"" ]; then
+	if [ "${gateway}" != "192.0.2.2" ]; then
 		atf_fail "Route not found"
 	fi
 }
