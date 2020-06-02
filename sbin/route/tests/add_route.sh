@@ -46,11 +46,10 @@ v4_body()
 
 	# add a  new route in the jail
 	jexec alcatraz route add 192.0.2.3 192.0.2.2
+	result=$(check_route "alcatraz" "192.0.2.3")
 
-	if [ $(check_route "alcatraz" "192.0.2.3")=="192.0.2.2" ];then
-		echo "route gateway matched"
-	else
-		atf_fail "Route is not present"
+	if [ "${result}" != "\"192.0.2.2\"" ]; then
+		atf_fail "Route not found"
 	fi
 }
 
