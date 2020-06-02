@@ -45,9 +45,9 @@ v4_body()
 	jexec alcatraz ifconfig ${epair}a 192.0.2.1/24 up
 
 	# add a  new route in the jail
-	jexec alcatraz route add 1.1.1.1 192.0.2.2
+	jexec alcatraz route add 192.0.2.3 192.0.2.2
 	
-    if [ $(check_route "alcatraz" "1.1.1.1")=="192.0.2.2" ];then
+    if [ $(check_route "alcatraz" "192.0.2.3")=="192.0.2.2" ];then
         echo "route gateway matched"
     else
         atf_fail "Route is not present"
