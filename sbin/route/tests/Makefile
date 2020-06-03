@@ -3,7 +3,7 @@
 PACKAGE=	tests
 
 ATF_TESTS_SH+=	\
-        add_route
+        basic
 
 ${PACKAGE}FILES+=	\
 		utils.subr

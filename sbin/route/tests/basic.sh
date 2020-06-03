@@ -29,15 +29,15 @@
 
 . $(atf_get_srcdir)/utils.subr
 
-atf_test_case "v4" "cleanup"
-v4_head()
+atf_test_case "route_v4" "cleanup"
+basic_v4_head()
 {
-	atf_set descr 'Route add test for v4'
+	atf_set descr 'add/change/delete route test for v4'
 	atf_set require.user root
 	atf_set require.progs jq
 }
 
-v4_body()
+basic_v4_body()
 {   
    	epair=$(vnet_mkepair)
 	ifconfig ${epair}b 192.0.2.2/24 up
@@ -49,16 +49,32 @@ v4_body()
 	gateway=$(check_route "alcatraz" "192.0.2.3")
 
 	if [ "${gateway}" != "192.0.2.2" ]; then
-		atf_fail "Route not found"
+		atf_fail "Failed to add new route."
+	fi
+
+	# change the added route
+	jexec alcatraz route change 192.0.2.3 192.0.2.4
+	gateway=$(check_route "alcatraz" "192.0.2.3")
+	
+	if [ "${gateway}" != "192.0.2.4" ]; then
+		atf_fail "Failed to change route."
+	fi
+
+	# delete the route
+	jexec alcatraz route delete 192.0.2.3
+	gateway=$(check_route "alcatraz" "192.0.2.3")
+
+	if [ "${gateway}" != "" ]; then
+		atf_fail "Failed to delete route."
 	fi
 }
 
-v4_cleanup()
+basic_v4_cleanup()
 {
 	vnet_cleanup
 }
 
 atf_init_test_cases()
 {
-	atf_add_test_case "v4"
+	atf_add_test_case "basic_v4"
 }
