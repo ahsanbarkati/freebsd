@@ -29,7 +29,7 @@
 
 . $(atf_get_srcdir)/utils.subr
 
-atf_test_case "route_v4" "cleanup"
+atf_test_case "basic_v4" "cleanup"
 basic_v4_head()
 {
 	atf_set descr 'add/change/delete route test for v4'
@@ -38,11 +38,11 @@ basic_v4_head()
 }
 
 basic_v4_body()
-{   
-   	epair=$(vnet_mkepair)
-	ifconfig ${epair}b 192.0.2.2/24 up
-	vnet_mkjail alcatraz ${epair}a
-	jexec alcatraz ifconfig ${epair}a 192.0.2.1/24 up
+{
+	epair=$(vnet_mkepair)
+	ifconfig ${epair}a 192.0.2.2/24 up
+	vnet_mkjail alcatraz ${epair}b
+	jexec alcatraz ifconfig ${epair}b 192.0.2.1/24 up
 
 	# add a new route in the jail
 	jexec alcatraz route add 192.0.2.3 192.0.2.2
@@ -55,7 +55,7 @@ basic_v4_body()
 	# change the added route
 	jexec alcatraz route change 192.0.2.3 192.0.2.4
 	gateway=$(check_route "alcatraz" "192.0.2.3")
-	
+
 	if [ "${gateway}" != "192.0.2.4" ]; then
 		atf_fail "Failed to change route."
 	fi
