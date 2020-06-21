@@ -74,7 +74,52 @@ basic_v4_cleanup()
 	vnet_cleanup
 }
 
+atf_test_case "basic_v6" "cleanup"
+basic_v6_head()
+{
+	atf_set descr 'add/change/delete route test for v6'
+	atf_set require.user root
+	atf_set require.progs jq
+}
+
+basic_v6_body()
+{
+	epair=$(vnet_mkepair)
+	ifconfig ${epair}a inet6 fd7a:803f:cc4b::1/64 up no_dad
+	vnet_mkjail alcatraz ${epair}b
+	jexec alcatraz ifconfig ${epair}b inet6 fd7a:803f:cc4b::2/64 up no_dad
+
+	# add a new route in the jail
+	jexec alcatraz route add -6 fd7a:803f:cc4b::3 fd7a:803f:cc4b::1
+	gateway=$(check_route "alcatraz" "fd7a:803f:cc4b::3")
+
+	if [ "${gateway}" != "fd7a:803f:cc4b::1" ]; then
+		atf_fail "Failed to add new route."
+	fi
+
+	# change the added route
+	jexec alcatraz route change -6 fd7a:803f:cc4b::3 fd7a:803f:cc4b::4
+	gateway=$(check_route "alcatraz" "fd7a:803f:cc4b::3")
+	if [ "${gateway}" != "fd7a:803f:cc4b::4" ]; then
+		atf_fail "Failed to change route."
+	fi
+
+	# delete the route
+	jexec alcatraz route -6 delete fd7a:803f:cc4b::3
+	gateway=$(check_route "alcatraz" "fd7a:803f:cc4b::3")
+
+	if [ "${gateway}" != "" ]; then
+		atf_fail "Failed to delete route."
+	fi
+}
+
+basic_v6_cleanup()
+{
+	vnet_cleanup
+}
+
 atf_init_test_cases()
 {
 	atf_add_test_case "basic_v4"
+	atf_add_test_case "basic_v6"
 }
