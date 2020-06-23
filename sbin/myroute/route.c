@@ -96,13 +96,11 @@ static int
 libroute_modify(rt_handle *h, char *dest, char *gateway, int operation)
 {
 	int flags = RTF_STATIC;
-	int nrflags = 0;
 
 	libroute_fillso(h, RTAX_DST, dest);
-	
-	nrflags |= F_ISHOST;
 
-	libroute_fillso(h, RTAX_GATEWAY, gateway);
+	if(gateway != NULL)
+		libroute_fillso(h, RTAX_GATEWAY, gateway);
 
 	flags |= RTF_UP;
 	flags |= RTF_HOST;
@@ -127,6 +125,15 @@ libroute_change(rt_handle *h, char *dest, char *gateway){
 	int error = libroute_modify(h, dest, gateway, RTM_CHANGE);
 	if(error){
 		err(1, "Failed to change route");
+	}
+	return 0;
+}
+
+static int
+libroute_del(rt_handle *h, char *dest){
+	int error = libroute_modify(h, dest, NULL, RTM_DELETE);
+	if(error){
+		err(1, "Failed to delete route");
 	}
 	return 0;
 }
@@ -184,7 +191,7 @@ main(int argc, char **argv)
 	argv += optind;
 
 	char *dest = argv[1];
-	char *gateway = argv[2];
+	//char *gateway = argv[2];
 
 	int defaultfib;
 	size_t len = sizeof(defaultfib);
@@ -195,7 +202,8 @@ main(int argc, char **argv)
 	if(h == NULL)
 		printf("failed to create handle\n");
 
-	libroute_add(h, dest, gateway);
+	//libroute_add(h, dest, gateway);
+	libroute_del(h, dest);
 
 	return 0;
 
