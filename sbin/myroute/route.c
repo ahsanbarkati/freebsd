@@ -38,13 +38,6 @@ __FBSDID("$FreeBSD$");
 #define	F_INTERFACE	0x10
 
 
-static volatile sig_atomic_t stop_read;
-static void
-stopit(int sig __unused)
-{
-	stop_read = 1;
-}
-
 static struct {
 	struct	rt_msghdr m_rtm;
 	char	m_space[512];
@@ -59,7 +52,7 @@ typedef struct rt_handle_t {
 
 
 rt_handle * libroute_open(int);
-static int	rtmsg(rt_handle*, int, int);
+static int	rtmsg(rt_handle*, int, int, int);
 
 
 rt_handle *
@@ -67,7 +60,7 @@ libroute_open(int fib)
 {
 	rt_handle *h;
 
-	h = calloc(0, sizeof(*h));
+	h = calloc(1, sizeof(*h));
 
 	if (h == NULL) {
 		printf("return");
@@ -82,7 +75,7 @@ libroute_open(int fib)
 
 
 static int
-libroute_fillso(rt_handle *h, int idx, char *str, int nrflags)
+libroute_fillso(rt_handle *h, int idx, char *str)
 {
 	struct sockaddr *sa;
 	struct sockaddr_in *sin;
@@ -94,38 +87,52 @@ libroute_fillso(rt_handle *h, int idx, char *str, int nrflags)
 
 	sin = (struct sockaddr_in *)(void *)sa;
 
-	inet_aton(str, &sin->sin_addr);
-	return 0;
+	if(inet_aton(str, &sin->sin_addr))
+		return 0;
+	return 1;
 }
 
 static int
-libroute_add(rt_handle *h, char *dest, char *gateway, int af)
+libroute_modify(rt_handle *h, char *dest, char *gateway, int operation)
 {
-	struct sigaction sa;
 	int flags = RTF_STATIC;
 	int nrflags = 0;
 
-	sigemptyset(&sa.sa_mask);
-	sa.sa_flags = 0;
-	sa.sa_handler = stopit;
-
-	libroute_fillso(h, RTAX_DST, dest, nrflags);
+	libroute_fillso(h, RTAX_DST, dest);
 	
 	nrflags |= F_ISHOST;
 
-	libroute_fillso(h, RTAX_GATEWAY, gateway, nrflags);
+	libroute_fillso(h, RTAX_GATEWAY, gateway);
 
 	flags |= RTF_UP;
 	flags |= RTF_HOST;
 
 	setsockopt(h->s, SOL_SOCKET, SO_SETFIB, (void *)&(h->fib),sizeof(h->fib));
-	int error = rtmsg(h, flags, h->fib);
+	int error = rtmsg(h, flags, h->fib, operation);
 
 	return error;
 }
 
 static int
-rtmsg(rt_handle *h, int flags, int fib)
+libroute_add(rt_handle *h, char *dest, char *gateway){
+	int error = libroute_modify(h, dest, gateway, RTM_ADD);
+	if(error){
+		err(1, "Failed to add new route");
+	}
+	return 0;
+}
+
+static int
+libroute_change(rt_handle *h, char *dest, char *gateway){
+	int error = libroute_modify(h, dest, gateway, RTM_CHANGE);
+	if(error){
+		err(1, "Failed to change route");
+	}
+	return 0;
+}
+
+static int
+rtmsg(rt_handle *h, int flags, int fib, int operation)
 {
 	int rlen;
 	char *cp = m_rtmsg.m_space;
@@ -145,7 +152,7 @@ rtmsg(rt_handle *h, int flags, int fib)
 	memset(&m_rtmsg, 0, sizeof(m_rtmsg));
 
 #define rtm m_rtmsg.m_rtm
-	rtm.rtm_type = RTM_ADD;
+	rtm.rtm_type = operation;
 	rtm.rtm_flags = flags;
 	rtm.rtm_version = RTM_VERSION;
 	rtm.rtm_seq = ++rtm_seq;
@@ -188,7 +195,7 @@ main(int argc, char **argv)
 	if(h == NULL)
 		printf("failed to create handle\n");
 
-	libroute_add(h, dest, gateway, AF_INET);
+	libroute_add(h, dest, gateway);
 
 	return 0;
 
