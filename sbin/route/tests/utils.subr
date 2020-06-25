@@ -35,7 +35,7 @@ check_route()
 	dest=$2
 	result=$(jexec $jname netstat -r --libxo json)
 
-	# This query selects the JSON item from the array of rt-entry of IPv4 table
+	# This query selects the JSON item from the array of rt-entry
 	# for which the destination address is $dest
 	query=".statistics.\"route-information\".\"route-table\".\"rt-family\"[0].\"rt-entry\"[]|select(.destination==\"${dest}\")"
 
