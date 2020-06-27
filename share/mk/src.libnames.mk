@@ -58,6 +58,7 @@ _INTERNALLIBS=	\
 		parse \
 		pe \
 		pmcstat \
+		route \
 		sl \
 		sm \
 		smdb \
@@ -575,6 +576,9 @@ LIBPMCSTAT?=	${LIBPMCSTATDIR}/libpmcstat${PIE_SUFFIX}.a
 
 LIBC_NOSSP_PICDIR=	${_LIB_OBJTOP}/lib/libc
 LIBC_NOSSP_PIC?=	${LIBC_NOSSP_PICDIR}/libc_nossp_pic.a
+
+LIBROUTEDIR=	${_LIB_OBJTOP}/lib/libroute
+LIBROUTE?=	${LIBIFCONFIGDIR}/libroute${PIE_SUFFIX}.a
 
 # Define a directory for each library.  This is useful for adding -L in when
 # not using a --sysroot or for meta mode bootstrapping when there is no
