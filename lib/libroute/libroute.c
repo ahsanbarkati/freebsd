@@ -1,36 +1,6 @@
 #include <sys/cdefs.h>
 __FBSDID("$FreeBSD$");
 
-#include <sys/param.h>
-#include <sys/file.h>
-#include <sys/socket.h>
-#include <sys/ioctl.h>
-#include <sys/sysctl.h>
-#include <sys/types.h>
-#include <sys/queue.h>
-
-#include <net/if.h>
-#include <net/route.h>
-#include <net/if_dl.h>
-#include <netinet/in.h>
-#include <netinet/if_ether.h>
-#include <arpa/inet.h>
-#include <netdb.h>
-
-#include <ctype.h>
-#include <err.h>
-#include <errno.h>
-#include <paths.h>
-#include <signal.h>
-#include <stdbool.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sysexits.h>
-#include <time.h>
-#include <unistd.h>
-#include <ifaddrs.h>
-
 #include "libroute.h"
 
 rt_handle *
@@ -50,44 +20,57 @@ libroute_open(int fib)
 	return (h);
 }
 
-int
-libroute_fillso(rt_handle *h, int idx, char *str)
+struct sockaddr*
+str_to_sockaddr(char * str)
 {
-	struct sockaddr *sa;
+	struct sockaddr* sa;
 	struct sockaddr_in *sin;
+	sa = calloc(1, sizeof(*sa));
 
-	h->rtm_addrs |= (1 << idx);
-	sa = (struct sockaddr *)&(h->so[idx]);
 	sa->sa_family = AF_INET;
 	sa->sa_len = sizeof(struct sockaddr_in);
-
 	sin = (struct sockaddr_in *)(void *)sa;
-
-	if(inet_aton(str, &sin->sin_addr))
-		return 0;
-	return 1;
+	inet_aton(str, &sin->sin_addr);
+	return sa;
 }
 
 int
-libroute_modify(rt_handle *h, char *dest, char *gateway, int operation)
+libroute_fillso(rt_handle *h, int idx, struct sockaddr* sa_in)
 {
-	int flags = RTF_STATIC;
+	struct sockaddr *sa; 
+	struct sockaddr_in *sin;
 
-	libroute_fillso(h, RTAX_DST, dest);
+	h->rtm_addrs |= (1 << idx);
+	
+	sa = (struct sockaddr *)&(h->so[idx]);
+	
+	sa->sa_family = sa_in->sa_family;
+	sa->sa_len = sa_in->sa_len;
+	sin = (struct sockaddr_in *)(void *)sa;
+	sin->sin_addr = ((struct sockaddr_in *)(void *)sa_in)->sin_addr;
+	return 0;
+}
 
-	if(gateway != NULL)
-		libroute_fillso(h, RTAX_GATEWAY, gateway);
+int
+libroute_modify(rt_handle *h, struct sockaddr* sa_dest, struct sockaddr* sa_gateway, int operation)
+{
+	int flags, error;
+	
+	flags = RTF_STATIC;
+	libroute_fillso(h, RTAX_DST, sa_dest);
+
+	if(sa_gateway != NULL)
+		libroute_fillso(h, RTAX_GATEWAY, sa_gateway);
 
 	flags |= RTF_UP;
 	flags |= RTF_HOST;
 
-	int error = rtmsg(h, flags, operation);
-
+	error = rtmsg(h, flags, operation);
 	return error;
 }
 
 int
-libroute_add(rt_handle *h, char *dest, char *gateway){
+libroute_add(rt_handle *h, struct sockaddr* dest, struct sockaddr* gateway){
 	int error = libroute_modify(h, dest, gateway, RTM_ADD);
 	if(error){
 		err(1, "Failed to add new route");
@@ -96,7 +79,7 @@ libroute_add(rt_handle *h, char *dest, char *gateway){
 }
 
 int
-libroute_change(rt_handle *h, char *dest, char *gateway){
+libroute_change(rt_handle *h, struct sockaddr* dest, struct sockaddr*gateway){
 	int error = libroute_modify(h, dest, gateway, RTM_CHANGE);
 	if(error){
 		err(1, "Failed to change route");
@@ -105,7 +88,7 @@ libroute_change(rt_handle *h, char *dest, char *gateway){
 }
 
 int
-libroute_del(rt_handle *h, char *dest){
+libroute_del(rt_handle *h, struct sockaddr* dest){
 	int error = libroute_modify(h, dest, NULL, RTM_DELETE);
 	if(error){
 		err(1, "Failed to delete route");
