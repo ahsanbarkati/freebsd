@@ -30,6 +30,13 @@
 
 #include "libroute.h"
 
+struct rt_handle_t {
+	int fib;
+	int s;
+	struct sockaddr_storage so[RTAX_MAX];
+	int rtm_addrs;
+};
+
 rt_handle *
 libroute_open(int fib)
 {
@@ -98,28 +105,19 @@ libroute_modify(rt_handle *h, struct sockaddr* sa_dest, struct sockaddr* sa_gate
 int
 libroute_add(rt_handle *h, struct sockaddr* dest, struct sockaddr* gateway){
 	int error = libroute_modify(h, dest, gateway, RTM_ADD);
-	if(error){
-		err(1, "Failed to add new route");
-	}
-	return 0;
+	return error;
 }
 
 int
 libroute_change(rt_handle *h, struct sockaddr* dest, struct sockaddr* gateway){
 	int error = libroute_modify(h, dest, gateway, RTM_CHANGE);
-	if(error){
-		err(1, "Failed to change route");
-	}
-	return 0;
+	return error;
 }
 
 int
 libroute_del(rt_handle *h, struct sockaddr* dest){
 	int error = libroute_modify(h, dest, NULL, RTM_DELETE);
-	if(error){
-		err(1, "Failed to delete route");
-	}
-	return 0;
+	return error;
 }
 
 int
@@ -139,7 +137,6 @@ rtmsg(rt_handle *h, int flags, int operation)
 		cp += l;						\
 	}
 
-	errno = 0;
 	memset(&m_rtmsg, 0, sizeof(m_rtmsg));
 
 #define rtm m_rtmsg.m_rtm
@@ -159,10 +156,8 @@ rtmsg(rt_handle *h, int flags, int operation)
 	NEXTADDR(RTA_IFA, so[RTAX_IFA]);
 	rtm.rtm_msglen = l = cp - (char *)&m_rtmsg;
 
-	printf("writing\n");
-	rlen = write(h->s, (char *)&m_rtmsg, l);
-
-
+	if((rlen = write(h->s, (char *)&m_rtmsg, l)) < 0)
+		return 1;
 #undef rtm
 	return (0);
 }
