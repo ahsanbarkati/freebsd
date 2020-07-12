@@ -30,11 +30,17 @@
 
 #include "libroute.h"
 
+struct rt_msg_t {
+	struct	rt_msghdr m_rtm;
+	char	m_space[512];
+};
+
 struct rt_handle_t {
 	int fib;
 	int s;
 	struct sockaddr_storage so[RTAX_MAX];
 	int rtm_addrs;
+	struct rt_msg_t rtmsg;
 };
 
 rt_handle *
@@ -87,18 +93,35 @@ libroute_fillso(rt_handle *h, int idx, struct sockaddr* sa_in)
 int
 libroute_modify(rt_handle *h, struct sockaddr* sa_dest, struct sockaddr* sa_gateway, int operation)
 {
-	int flags, error;
-	
-	flags = RTF_STATIC;
+	int flags, error, rlen, l;
 	libroute_fillso(h, RTAX_DST, sa_dest);
 
 	if(sa_gateway != NULL)
 		libroute_fillso(h, RTAX_GATEWAY, sa_gateway);
 
+	// we need to handle flags according to the operation
+	flags = RTF_STATIC;
 	flags |= RTF_UP;
 	flags |= RTF_HOST;
+	flags |= RTF_GATEWAY;
 
-	error = rtmsg(h, flags, operation);
+	if(operation == RTM_GET){
+		if (h->so[RTAX_IFP].ss_family == 0) {
+			h->so[RTAX_IFP].ss_family = AF_LINK;
+			h->so[RTAX_IFP].ss_len = sizeof(struct sockaddr_dl);
+			h->rtm_addrs |= RTA_IFP;
+		}
+	}
+
+	error = fill_rtmsg(h, flags, operation);
+	l = (h->rtmsg).m_rtm.rtm_msglen;
+
+	if((rlen = write(h->s, (char *)&(h->rtmsg), l)) < 0)
+		return 1;
+
+	if (operation == RTM_GET) {
+		l = read(h->s, (char *)&(h->rtmsg), sizeof(h->rtmsg));
+	}
 	return error;
 }
 
@@ -121,10 +144,16 @@ libroute_del(rt_handle *h, struct sockaddr* dest){
 }
 
 int
-rtmsg(rt_handle *h, int flags, int operation)
+libroute_get(rt_handle *h, struct sockaddr* dest){
+	int error = libroute_modify(h, dest, NULL, RTM_GET);
+	return error;
+}
+
+int
+fill_rtmsg(rt_handle *h, int flags, int operation)
 {
-	int rlen;
-	char *cp = m_rtmsg.m_space;
+	rt_msg* rtmsg = &(h->rtmsg);
+	char *cp = rtmsg->m_space;
 	int l, rtm_seq = 0;
 	struct sockaddr_storage *so = h->so;
 	static struct rt_metrics rt_metrics;
@@ -137,9 +166,7 @@ rtmsg(rt_handle *h, int flags, int operation)
 		cp += l;						\
 	}
 
-	memset(&m_rtmsg, 0, sizeof(m_rtmsg));
-
-#define rtm m_rtmsg.m_rtm
+#define rtm rtmsg->m_rtm
 	rtm.rtm_type = operation;
 	rtm.rtm_flags = flags;
 	rtm.rtm_version = RTM_VERSION;
@@ -154,10 +181,9 @@ rtmsg(rt_handle *h, int flags, int operation)
 	NEXTADDR(RTA_GENMASK, so[RTAX_GENMASK]);
 	NEXTADDR(RTA_IFP, so[RTAX_IFP]);
 	NEXTADDR(RTA_IFA, so[RTAX_IFA]);
-	rtm.rtm_msglen = l = cp - (char *)&m_rtmsg;
+	rtm.rtm_msglen = l = cp - (char *)rtmsg;
 
-	if((rlen = write(h->s, (char *)&m_rtmsg, l)) < 0)
-		return 1;
+
 #undef rtm
 	return (0);
 }

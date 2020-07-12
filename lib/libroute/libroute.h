@@ -53,11 +53,7 @@
 #include <unistd.h>
 #include <ifaddrs.h>
 
-static struct {
-	struct	rt_msghdr m_rtm;
-	char	m_space[512];
-} m_rtmsg;
-
+typedef struct rt_msg_t rt_msg;
 typedef struct rt_handle_t rt_handle;
 
 rt_handle * libroute_open(int);
@@ -67,4 +63,7 @@ int libroute_modify(rt_handle*, struct sockaddr*, struct sockaddr*, int);
 int libroute_add(rt_handle*, struct sockaddr*, struct sockaddr*);
 int libroute_change(rt_handle*, struct sockaddr*, struct sockaddr*);
 int libroute_del(rt_handle*, struct sockaddr*);
+int libroute_get(rt_handle*, struct sockaddr*);
 struct sockaddr* str_to_sockaddr(char *);
+
+int fill_rtmsg(rt_handle*, int, int);
