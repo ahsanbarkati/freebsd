@@ -34,6 +34,14 @@ main(int argc, char **argv)
 		sa_dest = str_to_sockaddr(dest);
 		libroute_get(h, sa_dest);
 	}
+	else if(strcmp(cmd, "add6") == 0)
+	{
+		dest = argv[1];
+		gateway = argv[2];
+		getaddr(h, 0, dest);
+		getaddr(h, 1, gateway);
+		libroute_add6(h);
+	}
 	else
 		printf("not a valid command\n");
 	return 0;
