@@ -4,12 +4,11 @@
 int
 main(int argc, char **argv)
 {
-
+	char *cmd, *dest, *gateway;
 	argc -= optind;
 	argv += optind;
 
-	char *dest = argv[1];
-	char *gateway = argv[2];
+	cmd = argv[0];
 
 	struct sockaddr *sa_dest, *sa_gateway;
 	int defaultfib;
@@ -21,12 +20,21 @@ main(int argc, char **argv)
 	if(h == NULL)
 		printf("failed to create handle\n");
 
-	sa_dest = str_to_sockaddr(dest);
-	sa_gateway = str_to_sockaddr(gateway);
-
-	libroute_add(h, sa_dest, sa_gateway);
-//	libroute_del(h, dest);
-
+	if(strcmp(cmd,"add") == 0)
+	{
+		dest = argv[1];
+		gateway = argv[2];
+		sa_dest = str_to_sockaddr(dest);
+		sa_gateway = str_to_sockaddr(gateway);
+		libroute_add(h, sa_dest, sa_gateway);
+	}
+	else if(strcmp(cmd, "get") == 0)
+	{
+		dest = argv[1];
+		sa_dest = str_to_sockaddr(dest);
+		libroute_get(h, sa_dest);
+	}
+	else
+		printf("not a valid command\n");
 	return 0;
-
 }
