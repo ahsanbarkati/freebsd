@@ -73,6 +73,131 @@ str_to_sockaddr(char * str)
 }
 
 int
+prefixlen(rt_handle *h, char *str)
+{
+	int len = atoi(str), q, r;
+	int max;
+	char *p;
+
+	h->rtm_addrs |= RTA_NETMASK;
+
+	struct sockaddr_in6 *sin6 = (struct sockaddr_in6 *)&(h->so)[RTAX_NETMASK];
+
+	max = 128;
+	p = (char *)&sin6->sin6_addr;
+	sin6->sin6_family = AF_INET6;
+	sin6->sin6_len = sizeof(*sin6);
+	
+
+	q = len >> 3;
+	r = len & 7;
+	memset((void *)p, 0, max / 8);
+	if (q > 0)
+		memset((void *)p, 0xff, q);
+	if (r > 0)
+		*((u_char *)p + q) = (0xff00 >> r) & 0xff;
+	if (len == max)
+		return (-1);
+	else
+		return (len);
+}
+
+int
+inet6_makenetandmask(rt_handle *h, struct sockaddr_in6 *sin6, char *plen)
+{
+
+	if (plen == NULL) {
+		if (IN6_IS_ADDR_UNSPECIFIED(&sin6->sin6_addr) &&
+		    sin6->sin6_scope_id == 0){}
+	}
+
+	if (plen == NULL || strcmp(plen, "128") == 0)
+		return (1);
+	h->rtm_addrs |= RTA_NETMASK;
+	prefixlen(h, plen);
+	return (0);
+}
+
+int
+getaddr(rt_handle *h, int idx, char *str)
+{
+	struct sockaddr *sa;
+	char *q;
+
+	int af = AF_INET6;
+	int aflen = sizeof(struct sockaddr_in6);
+
+	h->rtm_addrs |= (1 << idx);
+	sa = (struct sockaddr *)&(h->so[idx]);
+	sa->sa_family = af;
+	sa->sa_len = aflen;
+
+	struct addrinfo hints, *res;
+	int ecode;
+
+	q = NULL;
+	if (idx == RTAX_DST && (q = strchr(str, '/')) != NULL)
+		*q = '\0';
+
+	memset(&hints, 0, sizeof(hints));
+	hints.ai_family = sa->sa_family;
+	hints.ai_socktype = SOCK_DGRAM;
+	ecode = getaddrinfo(str, NULL, &hints, &res);
+
+	memcpy(sa, res->ai_addr, res->ai_addrlen);
+	freeaddrinfo(res);
+	if (q != NULL)
+		*q++ = '/';
+	if (idx == RTAX_DST)
+		return (inet6_makenetandmask(h, (struct sockaddr_in6 *)(void *)sa, q));
+	return (0);
+}
+
+int
+libroute_modify6(rt_handle *h, struct rt_msg_t *rtmsg, int operation)
+{
+	int flags, error, rlen, l;
+
+	// we need to handle flags according to the operation
+	flags = RTF_STATIC;
+	flags |= RTF_UP;
+	flags |= RTF_HOST;
+	flags |= RTF_GATEWAY;
+	
+
+	if(operation == RTM_GET){
+		if (h->so[RTAX_IFP].ss_family == 0) {
+			h->so[RTAX_IFP].ss_family = AF_LINK;
+			h->so[RTAX_IFP].ss_len = sizeof(struct sockaddr_dl);
+			h->rtm_addrs |= RTA_IFP;
+		}
+	}
+
+	error = fill_rtmsg(h, rtmsg, flags, operation);
+	l = (rtmsg->m_rtm).rtm_msglen;
+
+	if((rlen = write(h->s, (char *)rtmsg, l)) < 0){
+		printf("failed to write\n");
+		return 1;
+	}
+
+	if (operation == RTM_GET) {
+		l = read(h->s, (char *)rtmsg, sizeof(rtmsg));
+		printf("length read:%d\n",l);
+	}
+	return error;
+}
+
+int
+libroute_add6(rt_handle *h){
+	struct rt_msg_t rtmsg;
+	memset(&rtmsg, 0, sizeof(struct rt_msg_t));
+	int error = libroute_modify6(h, &rtmsg, RTM_ADD);
+	return error;
+}
+
+
+int
 libroute_fillso(rt_handle *h, int idx, struct sockaddr* sa_in)
 {
 	struct sockaddr *sa; 
@@ -95,7 +220,7 @@ libroute_modify(rt_handle *h, struct rt_msg_t *rtmsg, struct sockaddr* sa_dest, 
 	int flags, error, rlen, l;
 	libroute_fillso(h, RTAX_DST, sa_dest);
 
-	flags = RTF_STATIC;
+	
 
 	if(sa_gateway != NULL){
 		libroute_fillso(h, RTAX_GATEWAY, sa_gateway);
@@ -103,7 +228,7 @@ libroute_modify(rt_handle *h, struct rt_msg_t *rtmsg, struct sockaddr* sa_dest, 
 	}
 
 	// we need to handle flags according to the operation
-	
+	flags = RTF_STATIC;
 	flags |= RTF_UP;
 	flags |= RTF_HOST;
 	flags |= RTF_GATEWAY;

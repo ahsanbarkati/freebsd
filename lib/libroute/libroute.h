@@ -67,3 +67,10 @@ int libroute_get(rt_handle*, struct sockaddr*);
 struct sockaddr* str_to_sockaddr(char *);
 
 int fill_rtmsg(rt_handle*,  struct rt_msg_t*, int, int);
+
+int getaddr(rt_handle *, int , char *);
+int inet6_makenetandmask(rt_handle *, struct sockaddr_in6 *, char *);
+int prefixlen(rt_handle *, char *);
+
+int libroute_modify6(rt_handle*, struct rt_msg_t*, int);
+int libroute_add6(rt_handle*);
