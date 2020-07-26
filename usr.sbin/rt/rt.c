@@ -38,9 +38,9 @@ main(int argc, char **argv)
 	{
 		dest = argv[1];
 		gateway = argv[2];
-		getaddr(h, 0, dest);
-		getaddr(h, 1, gateway);
-		libroute_add6(h);
+		// getaddr(h, 0, dest);
+		// getaddr(h, 1, gateway);
+		libroute_add6(h, dest, gateway);
 	}
 	else
 		printf("not a valid command\n");
