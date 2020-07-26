@@ -68,9 +68,5 @@ struct sockaddr* str_to_sockaddr(char *);
 
 int fill_rtmsg(rt_handle*,  struct rt_msg_t*, int, int);
 
-struct sockaddr* getaddr(char *);
-int inet6_makenetandmask(rt_handle *, struct sockaddr_in6 *, char *);
-int prefixlen(rt_handle *, char *);
+struct sockaddr* str_to_sockaddr6(char *);
 
-int libroute_modify6(rt_handle*, struct rt_msg_t*, struct sockaddr*, struct sockaddr* , int);
-int libroute_add6(rt_handle*, char*, char*);

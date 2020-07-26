@@ -73,7 +73,7 @@ str_to_sockaddr(char * str)
 }
 
 struct sockaddr* 
-getaddr(char *str)
+str_to_sockaddr6(char *str)
 {	
 	struct sockaddr* sa;
 	struct addrinfo hints, *res;
@@ -94,67 +94,12 @@ getaddr(char *str)
 	return sa;
 }
 
-
-int
-libroute_modify6(rt_handle *h, struct rt_msg_t *rtmsg, struct sockaddr* sa_dest, struct sockaddr* sa_gateway, int operation)
-{
-	int flags, error, rlen, l;
-
-
-	libroute_fillso(h, RTAX_GATEWAY, sa_gateway);
-	libroute_fillso(h, RTAX_DST, sa_dest);
-
-	// we need to handle flags according to the operation
-	flags = RTF_STATIC;
-	flags |= RTF_UP;
-	flags |= RTF_HOST;
-	flags |= RTF_GATEWAY;
-	
-
-	if(operation == RTM_GET){
-		if (h->so[RTAX_IFP].ss_family == 0) {
-			h->so[RTAX_IFP].ss_family = AF_LINK;
-			h->so[RTAX_IFP].ss_len = sizeof(struct sockaddr_dl);
-			h->rtm_addrs |= RTA_IFP;
-		}
-	}
-
-	error = fill_rtmsg(h, rtmsg, flags, operation);
-	l = (rtmsg->m_rtm).rtm_msglen;
-
-	if((rlen = write(h->s, (char *)rtmsg, l)) < 0){
-		printf("failed to write\n");
-		return 1;
-	}
-
-	if (operation == RTM_GET) {
-		l = read(h->s, (char *)rtmsg, sizeof(rtmsg));
-		printf("length read:%d\n",l);
-	}
-	return error;
-}
-
-int
-libroute_add6(rt_handle *h, char* dest, char* gateway){
-	struct rt_msg_t rtmsg;
-	memset(&rtmsg, 0, sizeof(struct rt_msg_t));
-
-	struct sockaddr *sa_dest, *sa_gateway;
-	sa_gateway = getaddr(gateway);
-	sa_dest = getaddr(dest);
-
-	int error = libroute_modify(h, &rtmsg, sa_dest, sa_gateway, RTM_ADD);
-	return error;
-}
-
-
 int
 libroute_fillso(rt_handle *h, int idx, struct sockaddr* sa_in)
 {
 	struct sockaddr *sa; 
 
 	h->rtm_addrs |= (1 << idx);
-	
 	sa = (struct sockaddr *)&(h->so[idx]);
 	memcpy(sa, sa_in, sa_in->sa_len);
 	return 0;
@@ -165,8 +110,6 @@ libroute_modify(rt_handle *h, struct rt_msg_t *rtmsg, struct sockaddr* sa_dest, 
 {
 	int flags, error, rlen, l;
 	libroute_fillso(h, RTAX_DST, sa_dest);
-
-	
 
 	if(sa_gateway != NULL){
 		libroute_fillso(h, RTAX_GATEWAY, sa_gateway);
