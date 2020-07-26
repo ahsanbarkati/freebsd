@@ -28,19 +28,25 @@ main(int argc, char **argv)
 		sa_gateway = str_to_sockaddr(gateway);
 		libroute_add(h, sa_dest, sa_gateway);
 	}
-	else if(strcmp(cmd, "get") == 0)
+	else if(strcmp(cmd, "del") == 0)
 	{
 		dest = argv[1];
 		sa_dest = str_to_sockaddr(dest);
-		libroute_get(h, sa_dest);
+		libroute_del(h, sa_dest);
 	}
 	else if(strcmp(cmd, "add6") == 0)
 	{
 		dest = argv[1];
 		gateway = argv[2];
-		// getaddr(h, 0, dest);
-		// getaddr(h, 1, gateway);
-		libroute_add6(h, dest, gateway);
+		sa_gateway = str_to_sockaddr6(gateway);
+		sa_dest = str_to_sockaddr6(dest);
+		libroute_add(h, sa_dest, sa_gateway);
+	}
+	else if(strcmp(cmd, "del6") == 0)
+	{
+		dest = argv[1];
+		sa_dest = str_to_sockaddr6(dest);
+		libroute_del(h, sa_dest);
 	}
 	else
 		printf("not a valid command\n");
