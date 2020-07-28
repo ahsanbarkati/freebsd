@@ -140,7 +140,7 @@ libroute_modify(rt_handle *h, struct rt_msg_t *rtmsg, struct sockaddr* sa_dest, 
 	}
 
 	if (operation == RTM_GET) {
-		l = read(h->s, (char *)rtmsg, sizeof(rtmsg));
+		l = read(h->s, (char *)rtmsg, sizeof(*rtmsg));
 		printf("length read:%d\n",l);
 	}
 	return error;
