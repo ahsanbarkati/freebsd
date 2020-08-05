@@ -30,11 +30,6 @@
 
 #include "libroute.h"
 
-struct rt_msg_t {
-	struct	rt_msghdr m_rtm;
-	char	m_space[512];
-};
-
 struct rt_handle_t {
 	int fib;
 	int s;
@@ -56,6 +51,12 @@ libroute_open(int fib)
 	setsockopt(h->s, SOL_SOCKET, SO_SETFIB, (void *)&(h->fib),sizeof(h->fib));
 
 	return (h);
+}
+
+void
+libroute_setfib(rt_handle *h, int fib)
+{
+	h->fib = fib;
 }
 
 struct sockaddr*
@@ -106,22 +107,15 @@ libroute_fillso(rt_handle *h, int idx, struct sockaddr* sa_in)
 }
 
 int
-libroute_modify(rt_handle *h, struct rt_msg_t *rtmsg, struct sockaddr* sa_dest, struct sockaddr* sa_gateway, int operation)
+libroute_modify(rt_handle *h, struct rt_msg_t *rtmsg, struct sockaddr* sa_dest, struct sockaddr* sa_gateway, int operation, int flags)
 {
-	int flags, error, rlen, l;
+	int error, rlen, l;
 	libroute_fillso(h, RTAX_DST, sa_dest);
 
 	if(sa_gateway != NULL){
 		libroute_fillso(h, RTAX_GATEWAY, sa_gateway);
 		
 	}
-
-	// we need to handle flags according to the operation
-	flags = RTF_STATIC;
-	flags |= RTF_UP;
-	flags |= RTF_HOST;
-	flags |= RTF_GATEWAY;
-	
 
 	if(operation == RTM_GET){
 		if (h->so[RTAX_IFP].ss_family == 0) {
@@ -150,7 +144,15 @@ int
 libroute_add(rt_handle *h, struct sockaddr* dest, struct sockaddr* gateway){
 	struct rt_msg_t rtmsg;
 	memset(&rtmsg, 0, sizeof(struct rt_msg_t));
-	int error = libroute_modify(h, &rtmsg, dest, gateway, RTM_ADD);
+	int flags;
+
+	// we need to handle flags according to the operation
+	flags = RTF_STATIC;
+	flags |= RTF_UP;
+	flags |= RTF_HOST;
+	flags |= RTF_GATEWAY;
+
+	int error = libroute_modify(h, &rtmsg, dest, gateway, RTM_ADD, flags);
 	printf("write successful\n");
 	return error;
 }
@@ -159,7 +161,15 @@ int
 libroute_change(rt_handle *h, struct sockaddr* dest, struct sockaddr* gateway){
 	struct rt_msg_t rtmsg;
 	memset(&rtmsg, 0, sizeof(struct rt_msg_t));
-	int error = libroute_modify(h, &rtmsg, dest, gateway, RTM_CHANGE);
+	int flags;
+
+	// we need to handle flags according to the operation
+	flags = RTF_STATIC;
+	flags |= RTF_UP;
+	flags |= RTF_HOST;
+	flags |= RTF_GATEWAY;
+
+	int error = libroute_modify(h, &rtmsg, dest, gateway, RTM_CHANGE, flags);
 	return error;
 }
 
@@ -167,7 +177,15 @@ int
 libroute_del(rt_handle *h, struct sockaddr* dest){
 	struct rt_msg_t rtmsg;
 	memset(&rtmsg, 0, sizeof(struct rt_msg_t));
-	int error = libroute_modify(h, &rtmsg, dest, NULL, RTM_DELETE);
+	int flags;
+
+	// we need to handle flags according to the operation
+	flags = RTF_STATIC;
+	flags |= RTF_UP;
+	flags |= RTF_HOST;
+	flags |= RTF_GATEWAY;
+	flags |= RTF_PINNED;
+	int error = libroute_modify(h, &rtmsg, dest, NULL, RTM_DELETE, flags);
 	return error;
 }
 
@@ -175,14 +193,20 @@ int
 libroute_get(rt_handle *h, struct sockaddr* dest){
 	struct rt_msg_t rtmsg;
 	memset(&rtmsg, 0, sizeof(struct rt_msg_t));
-	int error = libroute_modify(h, &rtmsg, dest, NULL, RTM_GET);
+	int flags;
+
+	// we need to handle flags according to the operation
+	flags = RTF_STATIC;
+	flags |= RTF_UP;
+	flags |= RTF_HOST;
+	int error = libroute_modify(h, &rtmsg, dest, NULL, RTM_GET, flags);
 	return error;
 }
 
 int
 fill_rtmsg(rt_handle *h, struct rt_msg_t *rtmsg_t, int flags, int operation)
 {
-	rt_msg* rtmsg = rtmsg_t;
+	rt_msg_t* rtmsg = rtmsg_t;
 	char *cp = rtmsg->m_space;
 	int l, rtm_seq = 0;
 	struct sockaddr_storage *so = h->so;
