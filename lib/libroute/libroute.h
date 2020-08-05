@@ -57,7 +57,6 @@ typedef struct rt_msg_t rt_msg;
 typedef struct rt_handle_t rt_handle;
 
 rt_handle * libroute_open(int);
-int	rtmsg(rt_handle*, int, int);
 int libroute_fillso(rt_handle *h, int, struct sockaddr*);
 int libroute_modify(rt_handle*, struct rt_msg_t*, struct sockaddr*, struct sockaddr*, int);
 int libroute_add(rt_handle*, struct sockaddr*, struct sockaddr*);

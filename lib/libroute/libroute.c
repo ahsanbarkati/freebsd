@@ -151,6 +151,7 @@ libroute_add(rt_handle *h, struct sockaddr* dest, struct sockaddr* gateway){
 	struct rt_msg_t rtmsg;
 	memset(&rtmsg, 0, sizeof(struct rt_msg_t));
 	int error = libroute_modify(h, &rtmsg, dest, gateway, RTM_ADD);
+	printf("write successful\n");
 	return error;
 }
 
