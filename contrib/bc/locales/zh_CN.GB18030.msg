@@ -1,7 +1,7 @@
 $ $
-$ Copyright (c) 2018-2020 Gavin D. Howard and contributors.
+$ SPDX-License-Identifier: BSD-2-Clause
 $ $
-$ All rights reserved.
+$ Copyright (c) 2018-2020 Gavin D. Howard and contributors.
 $ $
 $ Redistribution and use in source and binary forms, with or without
 $ modification, are permitted provided that the following conditions are met:
@@ -103,9 +103,6 @@ $set 6
 3 "无法打开文件。%s"
 4 "文件不是ASCII: %s"
 5 "路径是一个目录：%s"
-6 "无效的命令行选项：'%c'(\"%s\")"
-
-$set 7
-
-1 "选项需要一个参数：'%c'(\"%s\")"
-2 "选项不需要参数。'%c'(\"%s\")"
+6 "无效的命令行选项：\"%s\""
+7 "选项需要一个参数：'%c'(\"%s\")"
+8 "选项不需要参数。'%c'(\"%s\")"

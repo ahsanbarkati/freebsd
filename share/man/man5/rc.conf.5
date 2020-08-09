@@ -24,7 +24,7 @@
 .\"
 .\" $FreeBSD$
 .\"
-.Dd June 23, 2020
+.Dd July 11, 2020
 .Dt RC.CONF 5
 .Os
 .Sh NAME
@@ -1955,6 +1955,8 @@ Used in conjunction with
 .Va gateway_enable
 allows hosts on private network addresses access to the Internet using
 this host as a network address translating router.
+Default is
+.Dq Li YES .
 .It Va ppp_ Ns Ao Ar profile Ac Ns _nat
 .Pq Vt str
 Overrides the global
@@ -3469,7 +3471,9 @@ the first suitable swap device listed in
 .Pa /etc/fstab
 will be used as dump device.
 Otherwise, the value of this variable is passed as the argument to
-.Xr dumpon 8 .
+.Xr dumpon 8
+and
+.Xr savecore 8 .
 To disable crash dumps, set this variable to
 .Dq Li NO .
 .It Va dumpon_flags

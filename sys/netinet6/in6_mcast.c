@@ -57,6 +57,7 @@ __FBSDID("$FreeBSD$");
 #include <net/if_var.h>
 #include <net/if_dl.h>
 #include <net/route.h>
+#include <net/route/nhop.h>
 #include <net/vnet.h>
 
 #include <netinet/in.h>
@@ -1816,35 +1817,30 @@ ip6_getmoptions(struct inpcb *inp, struct sockopt *sopt)
  *
  * This routine exists to support legacy IPv6 multicast applications.
  *
- * If inp is non-NULL, use this socket's current FIB number for any
- * required FIB lookup. Look up the group address in the unicast FIB,
- * and use its ifp; usually, this points to the default next-hop.
- * If the FIB lookup fails, return NULL.
+ * Use the socket's current FIB number for any required FIB lookup. Look up the
+ * group address in the unicast FIB, and use its ifp; usually, this points to
+ * the default next-hop.  If the FIB lookup fails, return NULL.
  *
  * FUTURE: Support multiple forwarding tables for IPv6.
  *
  * Returns NULL if no ifp could be found.
  */
 static struct ifnet *
-in6p_lookup_mcast_ifp(const struct inpcb *inp,
-    const struct sockaddr_in6 *gsin6)
+in6p_lookup_mcast_ifp(const struct inpcb *inp, const struct sockaddr_in6 *gsin6)
 {
-	struct nhop6_basic	nh6;
+	struct nhop_object	*nh;
 	struct in6_addr		dst;
 	uint32_t		scopeid;
 	uint32_t		fibnum;
 
-	KASSERT(inp->inp_vflag & INP_IPV6,
-	    ("%s: not INP_IPV6 inpcb", __func__));
 	KASSERT(gsin6->sin6_family == AF_INET6,
 	    ("%s: not AF_INET6 group", __func__));
 
 	in6_splitscope(&gsin6->sin6_addr, &dst, &scopeid);
-	fibnum = inp ? inp->inp_inc.inc_fibnum : RT_DEFAULT_FIB;
-	if (fib6_lookup_nh_basic(fibnum, &dst, scopeid, 0, 0, &nh6) != 0)
-		return (NULL);
+	fibnum = inp->inp_inc.inc_fibnum;
+	nh = fib6_lookup(fibnum, &dst, scopeid, 0, 0);
 
-	return (nh6.nh_ifp);
+	return (nh ? nh->nh_ifp : NULL);
 }
 
 /*

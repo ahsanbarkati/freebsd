@@ -1,9 +1,9 @@
 /*
  * *****************************************************************************
  *
- * Copyright (c) 2018-2020 Gavin D. Howard and contributors.
+ * SPDX-License-Identifier: BSD-2-Clause
  *
- * All rights reserved.
+ * Copyright (c) 2018-2020 Gavin D. Howard and contributors.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -130,13 +130,13 @@ void bc_lex_token(BcLex *l);
 #define BC_PARSE_LEAF(prev, bin_last, rparen) \
 	(!(bin_last) && ((rparen) || bc_parse_inst_isLeaf(prev)))
 
-#if BC_ENABLE_EXTRA_MATH
+#if BC_ENABLE_EXTRA_MATH && BC_ENABLE_RAND
 #define BC_PARSE_INST_VAR(t) \
 	((t) >= BC_INST_VAR && (t) <= BC_INST_SEED && (t) != BC_INST_ARRAY)
-#else // BC_ENABLE_EXTRA_MATH
+#else // BC_ENABLE_EXTRA_MATH && BC_ENABLE_RAND
 #define BC_PARSE_INST_VAR(t) \
 	((t) >= BC_INST_VAR && (t) <= BC_INST_SCALE && (t) != BC_INST_ARRAY)
-#endif // BC_ENABLE_EXTRA_MATH
+#endif // BC_ENABLE_EXTRA_MATH && BC_ENABLE_RAND
 
 #define BC_PARSE_PREV_PREFIX(p) \
 	((p) >= BC_INST_NEG && (p) <= BC_INST_BOOL_NOT)
@@ -158,9 +158,6 @@ void bc_parse_expr(BcParse *p, uint8_t flags);
 
 void bc_parse_parse(BcParse *p);
 void bc_parse_expr_status(BcParse *p, uint8_t flags, BcParseNext next);
-
-// This is necessary to clear up for if statements at the end of files.
-void bc_parse_noElse(BcParse *p);
 
 extern const char bc_sig_msg[];
 extern const uchar bc_sig_msg_len;

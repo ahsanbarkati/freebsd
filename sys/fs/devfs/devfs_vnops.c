@@ -533,7 +533,7 @@ devfs_access(struct vop_access_args *ap)
 		de = de->de_dir;
 
 	error = vaccess(vp->v_type, de->de_mode, de->de_uid, de->de_gid,
-	    ap->a_accmode, ap->a_cred, NULL);
+	    ap->a_accmode, ap->a_cred);
 	if (error == 0)
 		return (0);
 	if (error != EACCES)
@@ -787,6 +787,7 @@ devfs_ioctl(struct vop_ioctl_args *ap)
 	struct vnode *vpold, *vp;
 	struct cdevsw *dsw;
 	struct thread *td;
+	struct session *sess;
 	struct cdev *dev;
 	int error, ref, i;
 	const char *p;
@@ -836,18 +837,18 @@ devfs_ioctl(struct vop_ioctl_args *ap)
 		 * nothing left to do.
 		 */
 		sx_slock(&proctree_lock);
-		if (td->td_proc->p_session->s_ttyvp == vp ||
-		    td->td_proc->p_session->s_ttyp == NULL) {
+		sess = td->td_proc->p_session;
+		if (sess->s_ttyvp == vp || sess->s_ttyp == NULL) {
 			sx_sunlock(&proctree_lock);
 			return (0);
 		}
 
-		vpold = td->td_proc->p_session->s_ttyvp;
-		VREF(vp);
-		SESS_LOCK(td->td_proc->p_session);
-		td->td_proc->p_session->s_ttyvp = vp;
-		td->td_proc->p_session->s_ttydp = cdev2priv(dev);
-		SESS_UNLOCK(td->td_proc->p_session);
+		vrefact(vp);
+		SESS_LOCK(sess);
+		vpold = sess->s_ttyvp;
+		sess->s_ttyvp = vp;
+		sess->s_ttydp = cdev2priv(dev);
+		SESS_UNLOCK(sess);
 
 		sx_sunlock(&proctree_lock);
 

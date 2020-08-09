@@ -2,37 +2,27 @@
 
 .PATH: ${.CURDIR:H}/common
 
-SRCS=		crti.S crtn.S
-OBJS=		${SRCS:N*.h:R:S/$/.o/g}
-OBJS+=		Scrt1.o crt1.o gcrt1.o
-CFLAGS+=	-I${.CURDIR:H}/common \
-		-I${SRCTOP}/lib/libc/include
+.include <src.opts.mk>
+
 CFLAGS+=	-DCRT_IRELOC_SUPPRESS
 
-FILES=		${OBJS}
-FILESMODE=	${LIBMODE}
-FILESOWN=	${LIBOWN}
-FILESGRP=	${LIBGRP}
-FILESDIR=	${LIBDIR}
-# These FILES qualify as libraries for the purpose of LIBRARIES_ONLY.
-.undef LIBRARIES_ONLY
+.if ${MACHINE_ARCH:Mmips64}
+ELFCLASS=	64
+.else
+ELFCLASS=	32
+.endif
+.if ${MACHINE_ARCH:Mmips*el}
+ENDIAN=		l
+.else
+ENDIAN=		b
+.endif
+.if ${MACHINE_ARCH:Mmipsn32*}
+SUFFIX=		n32
+.else
+SUFFIX=
+.endif
 
-CLEANFILES=	${OBJS} crt1_c.o gcrt1_c.o Scrt1_c.o
-CLEANFILES+=	crtbrand.o ignore_init_note.o
-
-gcrt1_c.o: crt1_c.c
-	${CC} ${CFLAGS} -DGCRT -c -o ${.TARGET} ${.CURDIR}/crt1_c.c
-
-gcrt1.o: gcrt1_c.o crtbrand.o ignore_init_note.o
-	${LD} ${_LDFLAGS} -o gcrt1.o -r crtbrand.o ignore_init_note.o gcrt1_c.o
-
-crt1.o:	crt1_c.o crtbrand.o ignore_init_note.o
-	${LD} ${_LDFLAGS} -o crt1.o -r crtbrand.o ignore_init_note.o crt1_c.o
-
-Scrt1_c.o: crt1_c.c
-	${CC} ${CFLAGS} -fPIC -DPIC -c -o ${.TARGET} ${.CURDIR}/crt1_c.c
-
-Scrt1.o: Scrt1_c.o crtbrand.o ignore_init_note.o
-	${LD} ${_LDFLAGS} -o Scrt1.o -r crtbrand.o ignore_init_note.o Scrt1_c.o
+# binutils requires an explicit emulation for ld -r
+LDFLAGS.bfd+=	-Wl,-m -Wl,elf${ELFCLASS}${ENDIAN}tsmip${SUFFIX}_fbsd
 
 .include <bsd.lib.mk>

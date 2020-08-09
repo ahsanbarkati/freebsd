@@ -1,9 +1,9 @@
 /*
  * *****************************************************************************
  *
- * Copyright (c) 2018-2020 Gavin D. Howard and contributors.
+ * SPDX-License-Identifier: BSD-2-Clause
  *
- * All rights reserved.
+ * Copyright (c) 2018-2020 Gavin D. Howard and contributors.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -52,6 +52,6 @@ void bc_main(int argc, char **argv) {
 	vm.parse = bc_parse_parse;
 	vm.expr = bc_parse_expr;
 
-	bc_vm_boot(argc, argv, "BC_LINE_LENGTH", "BC_ENV_ARGS", "BC_EXPR_EXIT");
+	bc_vm_boot(argc, argv, "BC_LINE_LENGTH", "BC_ENV_ARGS");
 }
 #endif // BC_ENABLED
