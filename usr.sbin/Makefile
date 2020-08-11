@@ -37,7 +37,6 @@ SUBDIR=	adduser \
 	iostat \
 	iovctl \
 	kldxref \
-	libif \
 	mailwrapper \
 	makefs \
 	memcontrol \
@@ -76,7 +75,6 @@ SUBDIR=	adduser \
 	rpc.lockd \
 	rpc.statd \
 	rpc.umntall \
-	rt \
 	rtprio \
 	rwhod \
 	service \

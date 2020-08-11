@@ -60,7 +60,6 @@ SUBDIR=adjkerntz \
 	resolvconf \
 	restore \
 	route \
-	route_lib \
 	savecore \
 	setkey \
 	shutdown \
