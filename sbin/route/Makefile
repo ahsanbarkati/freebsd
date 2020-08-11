@@ -10,6 +10,9 @@ SRCS=	route.c keywords.h
 WARNS?=	3
 CLEANFILES+=keywords.h
 
+CFLAGS+=	-I${SRCTOP}/lib/libroute
+LIBADD+=	route
+
 CFLAGS+= -DNS
 .if ${MK_INET_SUPPORT} != "no"
 CFLAGS+= -DINET
