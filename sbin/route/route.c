@@ -1032,6 +1032,10 @@ newroute(int argc, char **argv)
 		if (fl->fl_error)
 			fl->fl_errno = errno;
 		error += fl->fl_error;
+
+		if(operation == RTM_GET && fl->fl_error == 0){
+			print_getmsg(&rtmsg_local.m_rtm, rtmsg_local.m_rtm.rtm_msglen, fl->fl_num);
+		}
 	}
 	if (*cmd == 'g' || *cmd == 's')
 		exit(error);

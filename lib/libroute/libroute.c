@@ -208,6 +208,8 @@ fill_rtmsg(rt_handle *h, struct rt_msg_t *rtmsg_t, int operation, int flags)
 	static struct rt_metrics rt_metrics;
 	static u_long  rtm_inits;
 
+	memset(rtmsg, 0, sizeof(struct rt_msg_t));
+
 #define NEXTADDR(w, u)							\
 	if ((h->rtm_addrs) & (w)) {						\
 		l = SA_SIZE(&(u));					\

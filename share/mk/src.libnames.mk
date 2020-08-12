@@ -698,4 +698,3 @@ _BADLIBADD+= ${_l}
 .endif
 
 .endif	# !target(__<src.libnames.mk>__)
-
