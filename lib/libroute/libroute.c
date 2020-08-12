@@ -73,9 +73,9 @@ str_to_sockaddr(char * str)
 	return sa;
 }
 
-struct sockaddr* 
+struct sockaddr*
 str_to_sockaddr6(char *str)
-{	
+{
 	struct sockaddr* sa;
 	struct addrinfo hints, *res;
 	int ecode;
@@ -98,7 +98,7 @@ str_to_sockaddr6(char *str)
 void
 libroute_fillso(rt_handle *h, int idx, struct sockaddr* sa_in)
 {
-	struct sockaddr *sa; 
+	struct sockaddr *sa;
 	h->rtm_addrs |= (1 << idx);
 	sa = (struct sockaddr *)&(h->so[idx]);
 	memcpy(sa, sa_in, sa_in->sa_len);

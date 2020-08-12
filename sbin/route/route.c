@@ -1022,7 +1022,7 @@ newroute(int argc, char **argv)
 		operation = RTM_CHANGE;
 	else if (cmd[0] == 'g' || cmd[0] == 's')
 		operation = RTM_GET;
-	else 
+	else
 		operation = RTM_DELETE;
 
 	error = 0;
