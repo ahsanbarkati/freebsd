@@ -95,26 +95,24 @@ str_to_sockaddr6(char *str)
 	return sa;
 }
 
-int
+void
 libroute_fillso(rt_handle *h, int idx, struct sockaddr* sa_in)
 {
 	struct sockaddr *sa; 
-
 	h->rtm_addrs |= (1 << idx);
 	sa = (struct sockaddr *)&(h->so[idx]);
 	memcpy(sa, sa_in, sa_in->sa_len);
-	return 0;
+	return;
 }
 
 int
 libroute_modify(rt_handle *h, struct rt_msg_t *rtmsg, struct sockaddr* sa_dest, struct sockaddr* sa_gateway, int operation, int flags)
 {
-	int error, rlen, l;
+	int rlen, l;
 	libroute_fillso(h, RTAX_DST, sa_dest);
 
 	if(sa_gateway != NULL){
 		libroute_fillso(h, RTAX_GATEWAY, sa_gateway);
-		
 	}
 
 	if(operation == RTM_GET){
@@ -125,19 +123,17 @@ libroute_modify(rt_handle *h, struct rt_msg_t *rtmsg, struct sockaddr* sa_dest, 
 		}
 	}
 
-	error = fill_rtmsg(h, rtmsg, flags, operation);
+	fill_rtmsg(h, rtmsg, operation, flags);
 	l = (rtmsg->m_rtm).rtm_msglen;
 
 	if((rlen = write(h->s, (char *)rtmsg, l)) < 0){
-		printf("failed to write\n");
 		return 1;
 	}
 
 	if (operation == RTM_GET) {
 		l = read(h->s, (char *)rtmsg, sizeof(*rtmsg));
-		printf("length read:%d\n",l);
 	}
-	return error;
+	return 0;
 }
 
 int
@@ -153,7 +149,6 @@ libroute_add(rt_handle *h, struct sockaddr* dest, struct sockaddr* gateway){
 	flags |= RTF_GATEWAY;
 
 	int error = libroute_modify(h, &rtmsg, dest, gateway, RTM_ADD, flags);
-	printf("write successful\n");
 	return error;
 }
 
@@ -203,8 +198,8 @@ libroute_get(rt_handle *h, struct sockaddr* dest){
 	return error;
 }
 
-int
-fill_rtmsg(rt_handle *h, struct rt_msg_t *rtmsg_t, int flags, int operation)
+void
+fill_rtmsg(rt_handle *h, struct rt_msg_t *rtmsg_t, int operation, int flags)
 {
 	rt_msg_t* rtmsg = rtmsg_t;
 	char *cp = rtmsg->m_space;
@@ -236,8 +231,6 @@ fill_rtmsg(rt_handle *h, struct rt_msg_t *rtmsg_t, int flags, int operation)
 	NEXTADDR(RTA_IFP, so[RTAX_IFP]);
 	NEXTADDR(RTA_IFA, so[RTAX_IFA]);
 	rtm.rtm_msglen = l = cp - (char *)rtmsg;
-
-
 #undef rtm
-	return (0);
+	return;
 }
