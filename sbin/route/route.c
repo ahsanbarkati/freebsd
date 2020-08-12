@@ -104,14 +104,8 @@ static int	defaultfib;
 static int	numfibs;
 static char	domain[MAXHOSTNAMELEN + 1];
 static bool	domain_initialized;
-static int	rtm_seq;
 static char	rt_line[NI_MAXHOST];
 static char	net_line[MAXHOSTNAMELEN + 1];
-
-static struct {
-	struct	rt_msghdr m_rtm;
-	char	m_space[512];
-} m_rtmsg;
 
 static TAILQ_HEAD(fibl_head_t, fibl) fibl_head;
 
@@ -131,14 +125,12 @@ static void	interfaces(void);
 static void	monitor(int, char*[]);
 static const char	*netname(struct sockaddr *);
 static void	newroute(int, char **);
-static int	newroute_fib(int, char *, int);
 static void	pmsg_addrs(char *, int, size_t);
 static void	pmsg_common(struct rt_msghdr *, size_t);
 static int	prefixlen(const char *);
 static void	print_getmsg(struct rt_msghdr *, int, int);
 static void	print_rtmsg(struct rt_msghdr *, size_t);
 static const char	*routename(struct sockaddr *);
-static int	rtmsg(int, int, int);
 static void	set_metric(char *, int);
 static int	set_sofib(int);
 static void	sockaddr(char *, struct sockaddr *, size_t);
@@ -1117,21 +1109,6 @@ newroute(int argc, char **argv)
 	exit(error);
 }
 
-static int
-newroute_fib(int fib, char *cmd, int flags)
-{
-	int error;
-
-	error = set_sofib(fib);
-	if (error) {
-		warn("fib number %d is ignored", fib);
-		return (error);
-	}
-
-	error = rtmsg(*cmd, flags, fib);
-	return (error);
-}
-
 #ifdef INET
 static void
 inet_makenetandmask(u_long net, struct sockaddr_in *sin,
@@ -1513,97 +1490,6 @@ monitor(int argc, char *argv[])
 		(void)printf("\ngot message of size %d on %s", n, ctime(&now));
 		print_rtmsg((struct rt_msghdr *)(void *)msg, n);
 	}
-}
-
-static int
-rtmsg(int cmd, int flags, int fib)
-{
-	int rlen;
-	char *cp = m_rtmsg.m_space;
-	int l;
-
-#define NEXTADDR(w, u)							\
-	if (rtm_addrs & (w)) {						\
-		l = SA_SIZE(&(u));					\
-		memmove(cp, (char *)&(u), l);				\
-		cp += l;						\
-		if (verbose)						\
-			sodump((struct sockaddr *)&(u), #w);		\
-	}
-
-	errno = 0;
-	memset(&m_rtmsg, 0, sizeof(m_rtmsg));
-	if (cmd == 'a')
-		cmd = RTM_ADD;
-	else if (cmd == 'c')
-		cmd = RTM_CHANGE;
-	else if (cmd == 'g' || cmd == 's') {
-		cmd = RTM_GET;
-		if (so[RTAX_IFP].ss_family == 0) {
-			so[RTAX_IFP].ss_family = AF_LINK;
-			so[RTAX_IFP].ss_len = sizeof(struct sockaddr_dl);
-			rtm_addrs |= RTA_IFP;
-		}
-	} else {
-		cmd = RTM_DELETE;
-		flags |= RTF_PINNED;
-	}
-#define rtm m_rtmsg.m_rtm
-	rtm.rtm_type = cmd;
-	rtm.rtm_flags = flags;
-	rtm.rtm_version = RTM_VERSION;
-	rtm.rtm_seq = ++rtm_seq;
-	rtm.rtm_addrs = rtm_addrs;
-	rtm.rtm_rmx = rt_metrics;
-	rtm.rtm_inits = rtm_inits;
-
-	NEXTADDR(RTA_DST, so[RTAX_DST]);
-	NEXTADDR(RTA_GATEWAY, so[RTAX_GATEWAY]);
-	NEXTADDR(RTA_NETMASK, so[RTAX_NETMASK]);
-	NEXTADDR(RTA_GENMASK, so[RTAX_GENMASK]);
-	NEXTADDR(RTA_IFP, so[RTAX_IFP]);
-	NEXTADDR(RTA_IFA, so[RTAX_IFA]);
-	rtm.rtm_msglen = l = cp - (char *)&m_rtmsg;
-	if (verbose)
-		print_rtmsg(&rtm, l);
-	if (debugonly)
-		return (0);
-	if ((rlen = write(s, (char *)&m_rtmsg, l)) < 0) {
-		switch (errno) {
-		case EPERM:
-			err(1, "writing to routing socket");
-			break;
-		case ESRCH:
-			warnx("route has not been found");
-			break;
-		case EEXIST:
-			/* Handled by newroute() */
-			break;
-		default:
-			warn("writing to routing socket");
-		}
-		return (-1);
-	}
-	if (cmd == RTM_GET) {
-		stop_read = 0;
-		alarm(READ_TIMEOUT);
-		do {
-			l = read(s, (char *)&m_rtmsg, sizeof(m_rtmsg));
-		} while (l > 0 && stop_read == 0 &&
-		    (rtm.rtm_type != RTM_GET || rtm.rtm_seq != rtm_seq ||
-			rtm.rtm_pid != pid));
-		if (stop_read != 0) {
-			warnx("read from routing socket timed out");
-			return (-1);
-		} else
-			alarm(0);
-		if (l < 0)
-			warn("read from routing socket");
-		else
-			print_getmsg(&rtm, l, fib);
-	}
-#undef rtm
-	return (0);
 }
 
 static const char *const msgtypes[] = {
