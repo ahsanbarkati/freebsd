@@ -1023,15 +1023,15 @@ newroute(int argc, char **argv)
 	}
 	TAILQ_FOREACH(fl, &fibl_head, fl_next) {
 		libroute_setfib(h, fl->fl_num);
-		fl->fl_error = libroute_modify(h, &rtmsg_local, 
-			(struct sockaddr *)&so[RTAX_DST], 
+		fl->fl_error = libroute_modify(h, &rtmsg_local,
+			(struct sockaddr *)&so[RTAX_DST],
 			(struct sockaddr *)&so[RTAX_GATEWAY], operation, flags);
 		if (fl->fl_error)
 			fl->fl_errno = errno;
 		error += fl->fl_error;
 
 		if(operation == RTM_GET && fl->fl_error == 0){
-			print_getmsg(&rtmsg_local.m_rtm, rtmsg_local.m_rtm.rtm_msglen, 
+			print_getmsg(&rtmsg_local.m_rtm, rtmsg_local.m_rtm.rtm_msglen,
 				fl->fl_num);
 		}
 	}
