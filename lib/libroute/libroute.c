@@ -38,18 +38,14 @@ rt_handle *
 libroute_open(int fib)
 {
 	rt_handle *h;
-	
 	h = calloc(1, sizeof(*h));
 	if (h == NULL)
 		return NULL;
-
 	h->s = socket(PF_ROUTE, SOCK_RAW, 0);
 	if (h->s < 0)
 		return NULL;
-
 	if(libroute_setfib(h, fib))
 		return NULL;
-
 	return h;
 }
 
@@ -113,7 +109,7 @@ libroute_fillso(rt_handle *h, int idx, struct sockaddr* sa_in)
 }
 
 int
-libroute_modify(rt_handle *h, struct rt_msg_t *rtmsg, struct sockaddr* sa_dest, 
+libroute_modify(rt_handle *h, struct rt_msg_t *rtmsg, struct sockaddr* sa_dest,
 	struct sockaddr* sa_gateway, int operation, int flags)
 {
 	int rlen, l;
