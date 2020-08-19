@@ -783,10 +783,9 @@ set_metric(char *value, int key)
 static void
 newroute(int argc, char **argv)
 {
-	rt_handle *h = libroute_open(defaultfib);
+	rt_handle *h;
 	struct rt_msg_t rtmsg_local;
 	int operation;
-
 	struct sigaction sa;
 	struct hostent *hp;
 	struct fibl *fl;
@@ -1018,15 +1017,22 @@ newroute(int argc, char **argv)
 		operation = RTM_DELETE;
 
 	error = 0;
+	h = libroute_open(defaultfib);
+	if(h == NULL){
+		errx(EX_OSERR, "Failed to open libroute handle");
+	}
 	TAILQ_FOREACH(fl, &fibl_head, fl_next) {
 		libroute_setfib(h, fl->fl_num);
-		fl->fl_error = libroute_modify(h, &rtmsg_local, (struct sockaddr *)&so[RTAX_DST], (struct sockaddr *)&so[RTAX_GATEWAY], operation, flags);
+		fl->fl_error = libroute_modify(h, &rtmsg_local, 
+			(struct sockaddr *)&so[RTAX_DST], 
+			(struct sockaddr *)&so[RTAX_GATEWAY], operation, flags);
 		if (fl->fl_error)
 			fl->fl_errno = errno;
 		error += fl->fl_error;
 
 		if(operation == RTM_GET && fl->fl_error == 0){
-			print_getmsg(&rtmsg_local.m_rtm, rtmsg_local.m_rtm.rtm_msglen, fl->fl_num);
+			print_getmsg(&rtmsg_local.m_rtm, rtmsg_local.m_rtm.rtm_msglen, 
+				fl->fl_num);
 		}
 	}
 	if (*cmd == 'g' || *cmd == 's')

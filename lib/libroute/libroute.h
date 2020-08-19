@@ -65,7 +65,7 @@ int libroute_change(rt_handle*, struct sockaddr*, struct sockaddr*);
 int libroute_del(rt_handle*, struct sockaddr*);
 int libroute_get(rt_handle*, struct sockaddr*);
 struct sockaddr* str_to_sockaddr(char *);
-void libroute_setfib(rt_handle *, int);
+int libroute_setfib(rt_handle *, int);
 
 void fill_rtmsg(rt_handle*,  struct rt_msg_t*, int, int);
 
