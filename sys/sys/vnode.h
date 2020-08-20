@@ -244,6 +244,8 @@ struct xvnode {
 #define VHOLD_ALL_FLAGS (VHOLD_NO_SMR)
 
 #define	VIRF_DOOMED	0x0001	/* This vnode is being recycled */
+#define	VIRF_PGREAD	0x0002	/* Direct reads from the page cache are permitted,
+				   never cleared once set */
 
 #define	VI_TEXT_REF	0x0001	/* Text ref grabbed use ref */
 #define	VI_MOUNT	0x0002	/* Mount in progress */
@@ -676,12 +678,11 @@ int	vaccess_acl_posix1e(enum vtype type, uid_t file_uid,
 	    gid_t file_gid, struct acl *acl, accmode_t accmode,
 	    struct ucred *cred);
 void	vattr_null(struct vattr *vap);
-int	vcount(struct vnode *vp);
 void	vlazy(struct vnode *);
 void	vdrop(struct vnode *);
 void	vdropl(struct vnode *);
 int	vflush(struct mount *mp, int rootrefs, int flags, struct thread *td);
-int	vget(struct vnode *vp, int flags, struct thread *td);
+int	vget(struct vnode *vp, int flags);
 enum vgetstate	vget_prep_smr(struct vnode *vp);
 enum vgetstate	vget_prep(struct vnode *vp);
 int	vget_finish(struct vnode *vp, int flags, enum vgetstate vs);
@@ -717,7 +718,8 @@ int	vn_generic_copy_file_range(struct vnode *invp, off_t *inoffp,
 	    unsigned int flags, struct ucred *incred, struct ucred *outcred,
 	    struct thread *fsize_td);
 int	vn_need_pageq_flush(struct vnode *vp);
-int	vn_isdisk(struct vnode *vp, int *errp);
+bool	vn_isdisk_error(struct vnode *vp, int *errp);
+bool	vn_isdisk(struct vnode *vp);
 int	_vn_lock(struct vnode *vp, int flags, const char *file, int line);
 #define vn_lock(vp, flags) _vn_lock(vp, flags, __FILE__, __LINE__)
 int	vn_open(struct nameidata *ndp, int *flagp, int cmode, struct file *fp);
@@ -737,8 +739,6 @@ int	vn_rdwr_inchunks(enum uio_rw rw, struct vnode *vp, void *base,
 	    struct thread *td);
 int	vn_rlimit_fsize(const struct vnode *vn, const struct uio *uio,
 	    struct thread *td);
-int	vn_stat(struct vnode *vp, struct stat *sb, struct ucred *active_cred,
-	    struct ucred *file_cred, struct thread *td);
 int	vn_start_write(struct vnode *vp, struct mount **mpp, int flags);
 int	vn_start_secondary_write(struct vnode *vp, struct mount **mpp,
 	    int flags);
@@ -893,6 +893,22 @@ void	vop_need_inactive_debugpost(void *a, int rc);
 
 void	vop_rename_fail(struct vop_rename_args *ap);
 
+#define	vop_stat_helper_pre(ap)	({						\
+	int _error;								\
+	AUDIT_ARG_VNODE1(ap->a_vp);						\
+	_error = mac_vnode_check_stat(ap->a_active_cred, ap->a_file_cred, ap->a_vp);\
+	if (__predict_true(_error == 0))					\
+		bzero(ap->a_sb, sizeof(*ap->a_sb));				\
+	_error;									\
+})
+
+#define	vop_stat_helper_post(ap, error)	({					\
+	int _error = (error);							\
+	if (priv_check_cred_vfs_generation(ap->a_td->td_ucred))			\
+		ap->a_sb->st_gen = 0;						\
+	_error;									\
+})
+
 #define	VOP_WRITE_PRE(ap)						\
 	struct vattr va;						\
 	int error;							\
@@ -952,11 +968,19 @@ do {									\
 void	vput(struct vnode *vp);
 void	vrele(struct vnode *vp);
 void	vref(struct vnode *vp);
-void	vrefl(struct vnode *vp);
 void	vrefact(struct vnode *vp);
-void	vrefactn(struct vnode *vp, u_int n);
-int	vrefcnt(struct vnode *vp);
 void 	v_addpollinfo(struct vnode *vp);
+static __inline int
+vrefcnt(struct vnode *vp)
+{
+
+	return (vp->v_usecount);
+}
+
+#define	vrefl(vp)	do {						\
+	ASSERT_VI_LOCKED(vp, __func__);					\
+	vref(vp);							\
+} while (0)
 
 int vnode_create_vobject(struct vnode *vp, off_t size, struct thread *td);
 void vnode_destroy_vobject(struct vnode *vp);

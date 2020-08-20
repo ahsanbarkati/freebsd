@@ -272,6 +272,7 @@ MAN=	accept_filter.9 \
 	printf.9 \
 	prison_check.9 \
 	priv.9 \
+	prng.9 \
 	proc_rwmem.9 \
 	pseudofs.9 \
 	psignal.9 \
@@ -1745,6 +1746,10 @@ MLINKS+=printf.9 log.9 \
 	printf.9 uprintf.9
 MLINKS+=priv.9 priv_check.9 \
 	priv.9 priv_check_cred.9
+MLINKS+=prng.9 prng32.9 \
+	prng.9 prng32_bounded.9 \
+	prng.9 prng64.9 \
+	prng.9 prng64_bounded.9
 MLINKS+=proc_rwmem.9 proc_readmem.9 \
 	proc_rwmem.9 proc_writemem.9
 MLINKS+=psignal.9 gsignal.9 \
@@ -2308,7 +2313,8 @@ MLINKS+=vm_page_insert.9 vm_page_remove.9
 MLINKS+=vm_page_wire.9 vm_page_unwire.9
 MLINKS+=VOP_ACCESS.9 VOP_ACCESSX.9
 MLINKS+=VOP_ATTRIB.9 VOP_GETATTR.9 \
-	VOP_ATTRIB.9 VOP_SETATTR.9
+	VOP_ATTRIB.9 VOP_SETATTR.9 \
+	VOP_ATTRIB.9 VOP_STAT.9
 MLINKS+=VOP_CREATE.9 VOP_MKDIR.9 \
 	VOP_CREATE.9 VOP_MKNOD.9 \
 	VOP_CREATE.9 VOP_SYMLINK.9
