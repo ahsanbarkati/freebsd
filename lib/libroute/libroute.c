@@ -25,13 +25,18 @@
  * $FreeBSD$
  */
 
+#include <errno.h>
 #include "libroute.h"
+
+static void fill_rtmsg(rt_handle*, struct rt_msg_t*, int, int);
+static void fillso(rt_handle *, int, struct sockaddr*);
 
 struct rt_handle_t {
 	int fib;
 	int s;
 	struct sockaddr_storage so[RTAX_MAX];
 	int rtm_addrs;
+	int errcode;
 };
 
 rt_handle *
@@ -39,51 +44,79 @@ libroute_open(int fib)
 {
 	rt_handle *h;
 	h = calloc(1, sizeof(*h));
-	if (h == NULL)
+	if (h == NULL) {
+		h->errcode = errno;
 		return NULL;
+	}
 	h->s = socket(PF_ROUTE, SOCK_RAW, 0);
-	if (h->s < 0)
-		return NULL;
-	if(libroute_setfib(h, fib))
-		return NULL;
-	return h;
+	if (h->s < 0){
+		h->errcode = errno;
+	}
+	if (libroute_setfib(h, fib)){
+		h->errcode = errno;
+	}
+	if (h->errcode) {
+		free(h);
+		return (NULL);	
+	}
+	return (h);
 }
+
+void libroute_close(rt_handle *h)
+{
+	free(h);
+}
+
+
+int
+libroute_errno(rt_handle *h)
+{
+	return (h->errcode);
+}
+
 
 int
 libroute_setfib(rt_handle *h, int fib)
 {
 	h->fib = fib;
-	return setsockopt(h->s, SOL_SOCKET, SO_SETFIB, (void *)&(h->fib),
-		sizeof(h->fib));
+	if (setsockopt(h->s, SOL_SOCKET, SO_SETFIB, (void *)&(h->fib),
+		sizeof(h->fib)) < 0) {
+		h->errcode = errno;
+		return (-1);
+	}
+	return (0);
 }
 
 struct sockaddr*
-str_to_sockaddr(char *str)
+str_to_sockaddr(rt_handle *h, char *str)
 {
 	struct sockaddr* sa;
 	struct sockaddr_in *sin;
 	sa = calloc(1, sizeof(*sa));
-	if(sa == NULL) {
+	if (sa == NULL) {
+		h->errcode = errno;
 		return NULL;
 	}
 
 	sa->sa_family = AF_INET;
 	sa->sa_len = sizeof(struct sockaddr_in);
 	sin = (struct sockaddr_in *)(void *)sa;
-	if(inet_aton(str, &sin->sin_addr) == 0) {
+	if (inet_aton(str, &sin->sin_addr) == 0) {
+		free(sa);
 		return NULL;
 	}
-	return sa;
+	return (sa);
 }
 
 struct sockaddr*
-str_to_sockaddr6(char *str)
+str_to_sockaddr6(rt_handle *h, char *str)
 {
 	struct sockaddr* sa;
 	struct addrinfo hints, *res;
 
 	sa = calloc(1, sizeof(*sa));
-	if(sa == NULL) {
+	if (sa == NULL) {
+		h->errcode = errno;
 		return NULL;
 	}
 	sa->sa_family = AF_INET6;
@@ -91,15 +124,17 @@ str_to_sockaddr6(char *str)
 	memset(&hints, 0, sizeof(hints));
 	hints.ai_family = sa->sa_family;
 	hints.ai_socktype = SOCK_DGRAM;
-	if(getaddrinfo(str, NULL, &hints, &res))
+	if (getaddrinfo(str, NULL, &hints, &res)) {
+		free(sa);
 		return NULL;
+	}
 	memcpy(sa, res->ai_addr, res->ai_addrlen);
 	freeaddrinfo(res);
-	return sa;
+	return (sa);
 }
 
-void
-libroute_fillso(rt_handle *h, int idx, struct sockaddr* sa_in)
+static void
+fillso(rt_handle *h, int idx, struct sockaddr* sa_in)
 {
 	struct sockaddr *sa;
 	h->rtm_addrs |= (1 << idx);
@@ -113,13 +148,13 @@ libroute_modify(rt_handle *h, struct rt_msg_t *rtmsg, struct sockaddr* sa_dest,
 	struct sockaddr* sa_gateway, int operation, int flags)
 {
 	int rlen, l;
-	libroute_fillso(h, RTAX_DST, sa_dest);
+	fillso(h, RTAX_DST, sa_dest);
 
-	if(sa_gateway != NULL){
-		libroute_fillso(h, RTAX_GATEWAY, sa_gateway);
+	if (sa_gateway != NULL) {
+		fillso(h, RTAX_GATEWAY, sa_gateway);
 	}
 
-	if(operation == RTM_GET){
+	if (operation == RTM_GET) {
 		if (h->so[RTAX_IFP].ss_family == 0) {
 			h->so[RTAX_IFP].ss_family = AF_LINK;
 			h->so[RTAX_IFP].ss_len = sizeof(struct sockaddr_dl);
@@ -130,66 +165,75 @@ libroute_modify(rt_handle *h, struct rt_msg_t *rtmsg, struct sockaddr* sa_dest,
 	fill_rtmsg(h, rtmsg, operation, flags);
 	l = (rtmsg->m_rtm).rtm_msglen;
 
-	if((rlen = write(h->s, (char *)rtmsg, l)) < 0){
-		return 1;
+	if (( rlen = write(h->s, (char *)rtmsg, l)) < 0) {
+		h->errcode = errno;
+		return (-1);
 	}
 
 	if (operation == RTM_GET) {
-		l = read(h->s, (char *)rtmsg, sizeof(*rtmsg));
+		if (( l = read(h->s, (char *)rtmsg, sizeof(*rtmsg))) < 0 ) {
+			h->errcode = errno;
+			return (-1);
+		}
 	}
-	return 0;
+	
+	return (0);
 }
 
 int
 libroute_add(rt_handle *h, struct sockaddr* dest, struct sockaddr* gateway){
 	struct rt_msg_t rtmsg;
-	memset(&rtmsg, 0, sizeof(struct rt_msg_t));
 	int flags;
+	
+	memset(&rtmsg, 0, sizeof(struct rt_msg_t));
 	flags = RTF_STATIC;
 	flags |= RTF_UP;
 	flags |= RTF_HOST;
 	flags |= RTF_GATEWAY;
 
-	return libroute_modify(h, &rtmsg, dest, gateway, RTM_ADD, flags);
+	return (libroute_modify(h, &rtmsg, dest, gateway, RTM_ADD, flags));
 }
 
 int
 libroute_change(rt_handle *h, struct sockaddr* dest, struct sockaddr* gateway){
 	struct rt_msg_t rtmsg;
-	memset(&rtmsg, 0, sizeof(struct rt_msg_t));
 	int flags;
+	
+	memset(&rtmsg, 0, sizeof(struct rt_msg_t));
 	flags = RTF_STATIC;
 	flags |= RTF_UP;
 	flags |= RTF_HOST;
 	flags |= RTF_GATEWAY;
 
-	return libroute_modify(h, &rtmsg, dest, gateway, RTM_CHANGE, flags);
+	return (libroute_modify(h, &rtmsg, dest, gateway, RTM_CHANGE, flags));
 }
 
 int
 libroute_del(rt_handle *h, struct sockaddr* dest){
 	struct rt_msg_t rtmsg;
-	memset(&rtmsg, 0, sizeof(struct rt_msg_t));
 	int flags;
+	
+	memset(&rtmsg, 0, sizeof(struct rt_msg_t));
 	flags = RTF_STATIC;
 	flags |= RTF_UP;
 	flags |= RTF_HOST;
 	flags |= RTF_GATEWAY;
-	return libroute_modify(h, &rtmsg, dest, NULL, RTM_DELETE, flags);
+	return (libroute_modify(h, &rtmsg, dest, NULL, RTM_DELETE, flags));
 }
 
 int
 libroute_get(rt_handle *h, struct sockaddr* dest){
 	struct rt_msg_t rtmsg;
-	memset(&rtmsg, 0, sizeof(struct rt_msg_t));
 	int flags;
+	
+	memset(&rtmsg, 0, sizeof(struct rt_msg_t));
 	flags = RTF_STATIC;
 	flags |= RTF_UP;
 	flags |= RTF_HOST;
-	return libroute_modify(h, &rtmsg, dest, NULL, RTM_GET, flags);
+	return (libroute_modify(h, &rtmsg, dest, NULL, RTM_GET, flags));
 }
 
-void
+static void
 fill_rtmsg(rt_handle *h, struct rt_msg_t *rtmsg_t, int operation, int flags)
 {
 	rt_msg_t* rtmsg = rtmsg_t;

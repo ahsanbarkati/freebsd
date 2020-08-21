@@ -8,10 +8,6 @@ SHLIBDIR?=	/lib
 SHLIB_MAJOR=	1
 SRCS=		libroute.c
 
-# If libroute become public uncomment those two lines
-#INCSDIR=	${INCLUDEDIR}
-#INCS=		libroute.h
-
 #MAN=		libroute.3
 
 CFLAGS+= -I${.CURDIR}

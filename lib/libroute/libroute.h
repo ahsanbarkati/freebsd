@@ -57,17 +57,15 @@ typedef struct rt_msg_t {
 
 typedef struct rt_handle_t rt_handle;
 
-rt_handle * libroute_open(int);
-void libroute_fillso(rt_handle *h, int, struct sockaddr*);
+rt_handle* libroute_open(int);
+void libroute_close(rt_handle*);
 int libroute_modify(rt_handle*, struct rt_msg_t*, struct sockaddr*, struct sockaddr*, int, int);
 int libroute_add(rt_handle*, struct sockaddr*, struct sockaddr*);
 int libroute_change(rt_handle*, struct sockaddr*, struct sockaddr*);
 int libroute_del(rt_handle*, struct sockaddr*);
 int libroute_get(rt_handle*, struct sockaddr*);
-struct sockaddr* str_to_sockaddr(char *);
 int libroute_setfib(rt_handle *, int);
-
-void fill_rtmsg(rt_handle*,  struct rt_msg_t*, int, int);
-
-struct sockaddr* str_to_sockaddr6(char *);
+int libroute_errno(rt_handle *);
+struct sockaddr* str_to_sockaddr(rt_handle *h, char *);
+struct sockaddr* str_to_sockaddr6(rt_handle *h, char *);
 

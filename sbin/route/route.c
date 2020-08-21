@@ -1035,6 +1035,7 @@ newroute(int argc, char **argv)
 				fl->fl_num);
 		}
 	}
+	libroute_close(h);
 	if (*cmd == 'g' || *cmd == 's')
 		exit(error);
 
