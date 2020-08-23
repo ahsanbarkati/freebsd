@@ -1,0 +1,146 @@
+.\"
+.\" Copyright (c) 2020 Ahsan Barkati
+.\"
+.\" Redistribution and use in source and binary forms, with or without
+.\" modification, are permitted provided that the following conditions
+.\" are met:
+.\" 1. Redistributions of source code must retain the above copyright
+.\"    notice, this list of conditions and the following disclaimer.
+.\" 2. Redistributions in binary form must reproduce the above copyright
+.\"    notice, this list of conditions and the following disclaimer in the
+.\"    documentation and/or other materials provided with the distribution.
+.\"
+.\" THIS SOFTWARE IS PROVIDED BY THE REGENTS AND CONTRIBUTORS ``AS IS'' AND
+.\" ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+.\" IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+.\" ARE DISCLAIMED.  IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE
+.\" FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+.\" DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+.\" OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+.\" HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+.\" LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+.\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+.\" SUCH DAMAGE.
+.\"
+.\" $FreeBSD$
+.\"
+.Dd August 20, 2020
+.Dt LIBROUTE 3
+.Os
+.Sh NAME
+.Nm libroute
+.Nd library for route management
+.Sh LIBRARY
+.Lb libroute
+.Sh SYNOPSIS
+.In libroute.h
+.Ft rt_handle*
+.Fn libroute_open "int fib"
+.Ft int
+.Fn libroute_setfib "rt_handle *h" "int fib"
+.Ft int
+.Fn libroute_modify "rt_handle *h" "struct rt_msg_t *rtmsg" "struct sockaddr* \
+sa_dest" "struct sockaddr* sa_gateway" "int operation" "int flags"
+.Ft int
+.Fn libroute_add "rt_handle *h" "struct sockaddr* dest" "struct sockaddr* \
+gateway"
+.Ft int
+.Fn libroute_change "rt_handle *h" "struct sockaddr* dest" "struct sockaddr* \
+gateway"
+.Ft int
+.Fn libroute_delete "rt_handle *h" "struct sockaddr* dest"
+.Ft int
+.Fn libroute_get "rt_handle *h" "struct sockaddr* dest"
+.Ft int
+.Fn libroute_errno "rt_handle *h"
+.Ft void
+.Fn libroute_close "rt_handle *h"
+.Sh DESCRIPTION
+The 
+.Xr libroute 3 
+provides various APIs for configuration and management of routes. It provides 
+the user a handle which can be configured for particular FIB. All the operations
+are carried out by making use of this handle. 
+.Pp
+The
+.Fn libroute_open
+is the function for the initialization of the handle. Its argument
+.Fa fib
+is an integer value which specifies the FIB number on which
+the handle will operate. This function opens a socket of domain PF_ROUTE and 
+type SOCK_RAW. It also sets the socket option with the specified FIB number and
+returns the handle structure. 
+.Pp
+The
+.Fn libroute_setfib
+function provides with a method to specify the FIB number for the handle 
+.Fa h .
+It sets the FIB in the handle as specified by the 
+.Fa fib 
+argument. It is useful for changing the FIB of the handle at any required point of time. 
+.Pp
+The
+.Fn libroute_modify
+function is the primary function which is responsible for the modification made 
+in the FIB table. The kind of operation is specified by the integer value, 
+.Fa operation .
+This function forms the route message for the given 
+.Fa dest ,
+.Fa gateway
+and 
+.Fa flags 
+and uses the write() syscall to write the message to the socket. This function 
+is also resonsible for reading from the kernel for the get operation. The message
+is read in the
+.Fa rtmsg
+structure
+.Pp
+The
+.Fn libroute_add ,
+.Fn libroute_change
+and the 
+.Fn libroute_delete
+function are used to add a new route, change and existing route and delete a route respectively.
+The
+.Fa dest
+and
+.Fa gateway
+are the sockaddr structures for the destination and the gateway for the route.
+.Pp
+The
+.Fn libroute_get
+reads the route for the given 
+.Fa dest
+from the kernel. The message
+is read in the
+.Fa rtmsg
+structure. [Work in Progress] It is planned that this function will return the 
+response in the form of a structure.
+.Pp
+The
+.Fn libroute_errno
+function returns the error number, from the given handle
+.Fa h ,
+if any. 
+.Pp
+The
+.Fn libroute_close
+function is used to close the handle session. It frees the memory held by the 
+handle structure. 
+.Sh RETURN VALUES
+The
+.Fn libroute_open
+returns the rt_handle structure.
+.Fn libroute_modify ,
+.Fn libroute_add ,
+.Fn libroute_change ,
+.Fn libroute_delete ,
+and 
+.Fn libroute_setfib ,
+returns 0 for a successful execution and -1 for any error. If the return value is 
+-1, then the corresponding error code can be accessed using
+.Fn libroute_errno .
+The return value of 
+.Fn libroute_errno
+is an integer value, representing the error code.
+.Pp
