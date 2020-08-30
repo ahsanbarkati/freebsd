@@ -49,10 +49,10 @@ libroute_open(int fib)
 		return NULL;
 	}
 	h->s = socket(PF_ROUTE, SOCK_RAW, 0);
-	if (h->s < 0){
+	if (h->s == -1){
 		h->errcode = errno;
 	}
-	if (libroute_setfib(h, fib)){
+	if (libroute_setfib(h, fib)) {
 		h->errcode = errno;
 	}
 	if (h->errcode) {
@@ -80,7 +80,7 @@ libroute_setfib(rt_handle *h, int fib)
 {
 	h->fib = fib;
 	if (setsockopt(h->s, SOL_SOCKET, SO_SETFIB, (void *)&(h->fib),
-		sizeof(h->fib)) < 0) {
+		sizeof(h->fib)) == -1) {
 		h->errcode = errno;
 		return (-1);
 	}
@@ -95,7 +95,7 @@ str_to_sockaddr(rt_handle *h, char *str)
 	sa = calloc(1, sizeof(*sa));
 	if (sa == NULL) {
 		h->errcode = errno;
-		return NULL;
+		return (NULL);
 	}
 
 	sa->sa_family = AF_INET;
@@ -103,7 +103,7 @@ str_to_sockaddr(rt_handle *h, char *str)
 	sin = (struct sockaddr_in *)(void *)sa;
 	if (inet_aton(str, &sin->sin_addr) == 0) {
 		free(sa);
-		return NULL;
+		return (NULL);
 	}
 	return (sa);
 }
@@ -117,7 +117,7 @@ str_to_sockaddr6(rt_handle *h, char *str)
 	sa = calloc(1, sizeof(*sa));
 	if (sa == NULL) {
 		h->errcode = errno;
-		return NULL;
+		return (NULL);
 	}
 	sa->sa_family = AF_INET6;
 	sa->sa_len = sizeof(struct sockaddr_in6);
@@ -126,7 +126,7 @@ str_to_sockaddr6(rt_handle *h, char *str)
 	hints.ai_socktype = SOCK_DGRAM;
 	if (getaddrinfo(str, NULL, &hints, &res)) {
 		free(sa);
-		return NULL;
+		return (NULL);
 	}
 	memcpy(sa, res->ai_addr, res->ai_addrlen);
 	freeaddrinfo(res);
@@ -147,7 +147,7 @@ int
 libroute_modify(rt_handle *h, struct rt_msg_t *rtmsg, struct sockaddr* sa_dest,
 	struct sockaddr* sa_gateway, int operation, int flags)
 {
-	int rlen, l;
+	int result, len;
 	fillso(h, RTAX_DST, sa_dest);
 
 	if (sa_gateway != NULL) {
@@ -163,15 +163,15 @@ libroute_modify(rt_handle *h, struct rt_msg_t *rtmsg, struct sockaddr* sa_dest,
 	}
 
 	fill_rtmsg(h, rtmsg, operation, flags);
-	l = (rtmsg->m_rtm).rtm_msglen;
+	len = (rtmsg->m_rtm).rtm_msglen;
 
-	if (( rlen = write(h->s, (char *)rtmsg, l)) < 0) {
+	if ((result = write(h->s, (char *)rtmsg, len)) < 0) {
 		h->errcode = errno;
 		return (-1);
 	}
 
 	if (operation == RTM_GET) {
-		if (( l = read(h->s, (char *)rtmsg, sizeof(*rtmsg))) < 0 ) {
+		if (( result = read(h->s, (char *)rtmsg, sizeof(*rtmsg))) < 0 ) {
 			h->errcode = errno;
 			return (-1);
 		}
@@ -234,9 +234,9 @@ libroute_get(rt_handle *h, struct sockaddr* dest){
 }
 
 static void
-fill_rtmsg(rt_handle *h, struct rt_msg_t *rtmsg_t, int operation, int flags)
+fill_rtmsg(rt_handle *h, struct rt_msg_t *routemsg, int operation, int flags)
 {
-	rt_msg_t* rtmsg = rtmsg_t;
+	rt_msg_t *rtmsg = routemsg;
 	char *cp = rtmsg->m_space;
 	int l, rtm_seq = 0;
 	struct sockaddr_storage *so = h->so;

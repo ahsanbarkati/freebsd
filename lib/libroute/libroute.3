@@ -56,49 +56,50 @@ gateway"
 .Ft void
 .Fn libroute_close "rt_handle *h"
 .Sh DESCRIPTION
-The 
-.Xr libroute 3 
-provides various APIs for configuration and management of routes. It provides 
-the user a handle which can be configured for particular FIB. All the operations
-are carried out by making use of this handle. 
+The
+.Nm libroute 3
+provides various APIs for configuration and management of routes.
+It provides the user a handle which can be configured for particular FIB.
+All the operations are carried out by making use of this handle.
 .Pp
 The
 .Fn libroute_open
-is the function for the initialization of the handle. Its argument
+is the function for the initialization of the handle.
+Its argument
 .Fa fib
-is an integer value which specifies the FIB number on which
-the handle will operate. This function opens a socket of domain PF_ROUTE and 
-type SOCK_RAW. It also sets the socket option with the specified FIB number and
-returns the handle structure. 
+is an integer value which specifies the FIB number on which the handle will operate.
+This function opens a socket of domain PF_ROUTE and type SOCK_RAW.
+It also sets the socket option with the specified FIB number and returns the handle structure.
 .Pp
 The
 .Fn libroute_setfib
-function provides with a method to specify the FIB number for the handle 
+function provides with a method to specify the FIB number for the handle
 .Fa h .
-It sets the FIB in the handle as specified by the 
-.Fa fib 
-argument. It is useful for changing the FIB of the handle at any required point of time. 
+It sets the FIB in the handle as specified by the
+.Fa fib
+argument.
+It is useful for changing the FIB of the handle at any required point of time.
 .Pp
 The
 .Fn libroute_modify
-function is the primary function which is responsible for the modification made 
-in the FIB table. The kind of operation is specified by the integer value, 
+function is the primary function which is responsible for the modification made in the FIB table.
+The kind of operation is specified by the integer value,
 .Fa operation .
-This function forms the route message for the given 
+This function forms the route message for the given
 .Fa dest ,
 .Fa gateway
-and 
-.Fa flags 
-and uses the write() syscall to write the message to the socket. This function 
-is also resonsible for reading from the kernel for the get operation. The message
-is read in the
+and
+.Fa flags
+and uses the write() syscall to write the message to the socket.
+This function is also resonsible for reading from the kernel for the get operation.
+The message is read in the
 .Fa rtmsg
 structure
 .Pp
 The
 .Fn libroute_add ,
 .Fn libroute_change
-and the 
+and the
 .Fn libroute_delete
 function are used to add a new route, change and existing route and delete a route respectively.
 The
@@ -109,24 +110,24 @@ are the sockaddr structures for the destination and the gateway for the route.
 .Pp
 The
 .Fn libroute_get
-reads the route for the given 
+reads the route for the given
 .Fa dest
-from the kernel. The message
-is read in the
+from the kernel.
+The message is read in the
 .Fa rtmsg
-structure. [Work in Progress] It is planned that this function will return the 
+structure. [Work in Progress] It is planned that this function will return the
 response in the form of a structure.
 .Pp
 The
 .Fn libroute_errno
 function returns the error number, from the given handle
 .Fa h ,
-if any. 
+if any.
 .Pp
 The
 .Fn libroute_close
-function is used to close the handle session. It frees the memory held by the 
-handle structure. 
+function is used to close the handle session.
+It frees the memory held by the handle structure.
 .Sh RETURN VALUES
 The
 .Fn libroute_open
@@ -135,12 +136,47 @@ returns the rt_handle structure.
 .Fn libroute_add ,
 .Fn libroute_change ,
 .Fn libroute_delete ,
-and 
+and
 .Fn libroute_setfib ,
-returns 0 for a successful execution and -1 for any error. If the return value is 
--1, then the corresponding error code can be accessed using
+returns 0 for a successful execution and -1 for any error.
+If the return value is -1, then the corresponding error code can be accessed using
 .Fn libroute_errno .
-The return value of 
+The return value of
 .Fn libroute_errno
 is an integer value, representing the error code.
 .Pp
+.Sh EXAMPLES
+The following example shows how to add a new route using libroute:
+.Bd -literal
+#include <libroute.h>
+
+rt_handle *handle;
+struct sockaddr *sa_dest, *sa_gateway;
+int error;
+
+handle = libroute_open(0);
+
+if (handle == NULL)
+	err(1, "libroute_open failed");
+
+sa_dest = str_to_sockaddr("192.168.2.2");
+sa_gateway = str_to_sockaddr("192.168.2.6");
+
+error = libroute_add(handle, sa_dest, sa_gateway);
+if(error == -1 ){
+    err(1, "Failed to add route);
+}
+
+libroute_close(handle);
+.Ed
+.Pp
+The following example shows how to delete an existing route:
+.Bd -literal
+
+error = libroute_delete(handle, sa_dest);
+if(error == -1 ){
+    err(1, "Failed to delete route);
+}
+.Ed
+.Pp
+
